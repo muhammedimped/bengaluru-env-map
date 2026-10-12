@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Bengaluru Environment Map</title>
+<style>
+  @page { size: A4; margin: 18mm 17mm 18mm; }
+  :root { --ink: #14211b; --muted: #55635c; --line: #dfe5e0; --accent: #17603f; --wash: #f1f6f2; --warm: #b4372c; }
+  * { box-sizing: border-box; }
+  html { font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif; color: var(--ink); font-size: 10.6pt; line-height: 1.5; }
+  body { margin: 0; }
+  h1 { font-size: 34pt; line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 6mm; }
+  h2 { font-size: 17pt; letter-spacing: -0.01em; margin: 0 0 3mm; color: var(--accent); break-after: avoid; }
+  h3 { font-size: 11pt; margin: 5mm 0 1.5mm; break-after: avoid; }
+  p { margin: 0 0 3mm; }
+  ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+  li { margin-bottom: 1.4mm; }
+  a { color: var(--accent); text-decoration: none; }
+  section { break-before: page; }
+  .kicker { font-size: 9pt; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 4mm; }
+  .lead { font-size: 13pt; line-height: 1.45; color: #2b3a33; }
+  .muted { color: var(--muted); }
+  .small { font-size: 9pt; }
+
+  .cover { break-before: auto; height: 258mm; display: flex; flex-direction: column; }
+  .cover .lead { max-width: 150mm; margin-bottom: 7mm; }
+  .cover img { width: 100%; border-radius: 3mm; border: 0.3mm solid var(--line); }
+  .cover .foot { margin-top: auto; display: flex; justify-content: space-between; align-items: flex-end; border-top: 0.3mm solid var(--line); padding-top: 4mm; }
+  .cover .url { font-size: 13pt; font-weight: 700; }
+
+  figure { margin: 4mm 0; break-inside: avoid; }
+  figure img { width: 100%; display: block; border-radius: 2mm; border: 0.3mm solid var(--line); }
+  figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 1.5mm; }
+  .phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
+  .phones img { border-radius: 4mm; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 4mm 0 5mm; }
+  .stat { background: var(--wash); border-radius: 2mm; padding: 3.5mm; }
+  .stat b { display: block; font-size: 19pt; line-height: 1.1; color: var(--accent); }
+  .stat span { font-size: 8.8pt; color: var(--muted); }
+
+  .quote { border-left: 1mm solid var(--accent); background: var(--wash); padding: 4mm 5mm; margin: 4mm 0; font-size: 11.5pt; }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .card { border: 0.3mm solid var(--line); border-radius: 2mm; padding: 3.5mm 4mm; break-inside: avoid; }
+  .card h3 { margin-top: 0; }
+  .card p:last-child, .card ul:last-child { margin-bottom: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 9.2pt; margin: 3mm 0 4mm; }
+  th { text-align: left; font-size: 8.4pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 0.4mm solid var(--ink); padding: 1.5mm 2mm 1.5mm 0; }
+  td { border-bottom: 0.25mm solid var(--line); padding: 1.8mm 2mm 1.8mm 0; vertical-align: top; }
+  tr { break-inside: avoid; }
+
+  .steps { list-style: none; padding: 0; counter-reset: s; }
+  .steps li { counter-increment: s; position: relative; padding: 0 0 3.2mm 11mm; margin: 0; break-inside: avoid; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: 0; width: 7mm; height: 7mm; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 9.5pt; display: grid; place-items: center; }
+  .steps b { display: block; }
+  .fix { color: var(--warm); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="kicker">Project note · 12 October 2026</div>
+  <h1>Bengaluru<br>Environment Map</h1>
+  <p class="lead">What a rental listing won’t tell you: how hot an area gets, how green it is, whether it floods, what is in the air, and what sits next door. Ward by ward, for the whole city, free to use.</p>
+  <img src="heat.jpg" alt="The map showing daytime heat across Bengaluru's 243 wards">
+  <div class="foot">
+    <div>
+      <div class="muted small">Live at</div>
+      <div class="url"><a href="https://bengaluru-env-map.vercel.app">bengaluru-env-map.vercel.app</a></div>
+    </div>
+    <div class="muted small" style="text-align:right">From idea to public website in one working day.<br>Built in conversation with Claude Code.</div>
+  </div>
+</div>
+
+<section>
+  <div class="kicker">1 · The idea</div>
+  <h2>Property sites tell you the rent. Nobody tells you the climate.</h2>
+  <p class="lead">When people choose where to live in Bengaluru, they can look up rent ranges, flat sizes and landlord reviews in seconds. They cannot easily find out how hot the area gets, how many trees it has, whether it is near a dump or an industrial belt, or whether it sits on low ground that floods.</p>
+  <div class="quote">“Nobody is telling what the climate is out there: how much heat it produces, how many trees it has, how many lakes, what the CO₂ level is. I just want to make people aware.”<br><span class="muted small">The brief that started the project, in the founder’s words, lightly edited</span></div>
+  <p>The idea is a single public map of Bengaluru where anyone can pick an area and see its environmental picture: heat, greenery, parks and lakes, flood exposure, industry, waste sites, traffic and air. The first audience is people renting or buying a home. The wider aim is awareness: making the environmental differences between neighbourhoods visible to everyone who lives in them.</p>
+
+  <h3>What was asked for at the start</h3>
+  <div class="cols">
+    <ul>
+      <li>A map at the level of a ward or locality, not the whole city as one number</li>
+      <li>Heat: which areas run hot, which stay cooler, and why</li>
+      <li>Greenery, parks, trees and lakes</li>
+      <li>Industrial areas, sewage and dumping grounds</li>
+    </ul>
+    <ul>
+      <li>Traffic and noise</li>
+      <li>CO₂, methane and other gases in the air</li>
+      <li>Past floods, fires and other disasters</li>
+      <li>Real data from real sources, kept up to date</li>
+    </ul>
+  </div>
+  <p>Most of this now exists in a working form. A few items turned out to have no trustworthy public data yet; those are listed plainly in section 6.</p>
+
+  <div class="stats">
+    <div class="stat"><b>243</b><span>wards covered, the whole BBMP area</span></div>
+    <div class="stat"><b>12</b><span>map layers to switch between</span></div>
+    <div class="stat"><b>1,120</b><span>localities and metro stations searchable</span></div>
+    <div class="stat"><b>9</b><span>open data sources combined</span></div>
+  </div>
+</section>
+
+<section>
+  <div class="kicker">2 · What exists today</div>
+  <h2>A live website that works on a phone</h2>
+  <p>Open the link, search for a locality or metro station, or tap “my area”. The map opens the ward you asked about and shows every figure next to its rank among all 243 wards, so “38.9°C” comes with “59th coolest of 243”.</p>
+  <figure class="phones">
+    <img src="phone-map.jpg" alt="Phone view of the map">
+    <img src="phone-search.jpg" alt="Searching for Indiranagar on a phone">
+    <img src="phone-ward.jpg" alt="A ward profile on a phone">
+  </figure>
+  <figcaption>On a phone: the full-screen map, search by locality or metro station, and a ward profile that slides up from the bottom.</figcaption>
+
+  <h3>What you can do with it</h3>
+  <div class="cols">
+    <ul>
+      <li><b>Compare areas</b> on twelve layers: environment score, daytime heat, night heat, low-lying land, flood spots, storm drains, greenery, parks, lakes, industrial land, major roads and distance to a dump</li>
+      <li><b>Search</b> 1,046 localities and 74 metro stations by the names people actually use, such as “Indiranagar 2nd Stage”</li>
+      <li><b>Find your own area</b> with one tap using the phone’s location</li>
+    </ul>
+    <ul>
+      <li><b>See the sources of trouble</b>: landfills, dumps, sewage plants and BBMP’s listed flood spots as dots on the map</li>
+      <li><b>Check air readings</b> from government monitors and community sensors, each labelled with when it was measured</li>
+      <li><b>Change the view</b>: light, streets, dark or satellite, and a 3D mode where each ward rises as a block</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <figure>
+    <img src="3d.jpg" alt="3D view of daytime heat">
+    <figcaption>3D view of daytime heat. Each ward is a block; the hottest stand tallest. It is a graphic of the data, not a model of the terrain.</figcaption>
+  </figure>
+  <figure>
+    <img src="lowland.jpg" alt="Low-lying land layer">
+    <figcaption>Low-lying land: the share of each ward sitting less than 3 m above the drainage line it would flood from. The eastern and south-eastern belt stands out.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="kicker">3 · What the map already shows</div>
+  <h2>The differences between neighbourhoods are large</h2>
+  <p>These come straight from the data on the live site.</p>
+  <div class="stats">
+    <div class="stat"><b>7°C</b><span>gap in summer surface heat between the coolest and hottest ward (36.0°C to 43.2°C)</span></div>
+    <div class="stat"><b>49%</b><span>of Bellanduru ward is low-lying land, second highest in the city</span></div>
+    <div class="stat"><b>62%</b><span>of Peenya ward is industrial land</span></div>
+    <div class="stat"><b>375</b><span>flood-prone locations listed by BBMP, mapped as individual dots</span></div>
+  </div>
+  <ul>
+    <li><b>Heat follows concrete.</b> The hottest wards on a summer morning are dense, built-up ones such as Devara Jeevanahalli, Kaveripura and Hegganahalli. The coolest sit beside lakes and tree cover, such as Bilekhalli and Old Thippasandra.</li>
+    <li><b>Greenery is very uneven.</b> Agaram, New Bayappanahalli and Aramane Nagara are several times greener by satellite measure than Chickpete or Kempapura Agrahara.</li>
+    <li><b>Flood exposure is not where the official list says.</b> BBMP’s published lists have no flood spot in Bellanduru ward, an area known for flooding. Ground elevation tells a different story, which is why the map shows both.</li>
+    <li><b>One area can be good and bad at once.</b> Bellanduru is among the coolest wards at night and fairly green, yet half of it is low-lying. A single “good area / bad area” label hides exactly what a home-seeker needs to know.</li>
+  </ul>
+  <figure>
+    <img src="satellite.jpg" alt="Satellite view of Bellanduru ward with its profile">
+    <figcaption>Bellanduru ward on the satellite view, with its profile open: cool at night, but 49.2% low-lying land.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <div class="kicker">4 · How the idea became real</div>
+  <h2>Ten steps, one day</h2>
+  <p>The whole build happened on 12 October 2026 as a running conversation: the founder described what was wanted and reacted to each version; Claude Code found the data, wrote the software, tested it and put it online. Several steps were corrections after something did not hold up.</p>
+  <ol class="steps">
+    <li><b>From a spoken idea to a first map.</b>Checked which open data sources actually respond, then built a working map of all 243 wards with satellite heat, greenery, parks, lakes, industry, roads and waste sites.</li>
+    <li><b>Search by the names people use.</b>Added 1,046 localities and 74 metro stations, each tied to the ward it sits in.</li>
+    <li><b>Flood data.</b>A commercial flood map was suggested as a source. <span class="fix">Its data is private, so it was not copied.</span> The public BBMP flood-location lists it relies on were found and used instead.</li>
+    <li><b>Live air quality.</b>A popular air-quality site was suggested. <span class="fix">It blocks automated access, so it was not scraped.</span> Government monitoring stations were connected through OpenAQ, an open service.</li>
+    <li><b>Honest labelling of stale readings.</b><span class="fix">Most government stations turned out to be five days behind.</span> Every reading now shows when it was measured, and silent stations are greyed out.</li>
+    <li><b>A proper phone version.</b>Full-screen map, floating search, a slide-up details sheet and a “my area” button.</li>
+    <li><b>Going public.</b>Deployed to Vercel under the founder’s account, with the data key kept out of public view.</li>
+    <li><b>Sharper satellite data through Google Earth Engine.</b>Heat improved from 1 km to 30 m detail and greenery from 250 m to 10 m. A new low-lying land layer <span class="fix">closed the Bellandur flood gap.</span></li>
+    <li><b>Fixes from real phone use.</b><span class="fix">Dots could not be tapped on a phone.</span> Taps now allow for fingertip size.</li>
+    <li><b>Map views and 3D.</b>Light, streets, dark and satellite views, plus 3D blocks. <span class="fix">Tapping a 3D block picked the wrong ward;</span> picking now follows the line of sight.</li>
+  </ol>
+</section>
+
+<section>
+  <div class="kicker">5 · Where the data comes from</div>
+  <h2>Nine open sources, each credited on the site</h2>
+  <table>
+    <tr><th style="width:27%">What it shows</th><th style="width:38%">Source</th><th>Detail and freshness</th></tr>
+    <tr><td>Daytime heat</td><td>Landsat 8 and 9 satellites, via Google Earth Engine</td><td>30 m. Nine cloud-free passes, March to mid-May 2026, about 10:30 am</td></tr>
+    <tr><td>Night heat</td><td>NASA MODIS Aqua satellite</td><td>1 km. Summer 2026, about 1:30 am</td></tr>
+    <tr><td>Greenery</td><td>Sentinel-2 satellites, via Google Earth Engine</td><td>10 m. 33 low-cloud images, January to April 2026</td></tr>
+    <tr><td>Low-lying land</td><td>MERIT Hydro elevation data, via Google Earth Engine</td><td>90 m. Height above the nearest drainage line</td></tr>
+    <tr><td>Flood spots</td><td>BBMP lists of flood-vulnerable, flood-prone and low-lying locations, published on OpenCity</td><td>375 locations. Public domain, undated</td></tr>
+    <tr><td>Parks, lakes, industry, roads, storm drains, waste sites, localities, metro stations</td><td>OpenStreetMap</td><td>Mapped by volunteers; as complete as their coverage</td></tr>
+    <tr><td>Air monitoring stations</td><td>Government (CPCB / KSPCB) monitors and community sensors, via OpenAQ</td><td>13 stations, checked every 30 minutes</td></tr>
+    <tr><td>Modelled air, CO₂, methane, weather</td><td>Open-Meteo</td><td>Hourly, but a regional model: nearby wards read alike</td></tr>
+    <tr><td>Ward boundaries</td><td>BBMP 243-ward delimitation, via KGIS and DataMeet</td><td>Official boundaries</td></tr>
+  </table>
+  <h3>The environment score</h3>
+  <p>Each ward gets a score out of 100 by ranking it against the other wards: heat 30%, greenery 25%, flood exposure 15%, parks and lakes 10%, major roads 10%, industry 10%. The weights are a first judgement, not a standard, and the site says so. The individual layers matter more than the single number.</p>
+  <h3>How it is put together</h3>
+  <p>A data script gathers the sources and works out every figure for every ward. The website then loads those figures and draws the map in the browser. Air station readings are fetched live through a small server function so the access key stays private. The site runs on Vercel; the satellite processing runs on Google Earth Engine under a non-commercial registration.</p>
+</section>
+
+<section>
+  <div class="kicker">6 · The impact it can create</div>
+  <h2>Making the invisible part of a neighbourhood visible</h2>
+  <p>The map has only just gone public, so what follows is what it makes possible, not results already achieved.</p>
+  <div class="cols">
+    <div class="card"><h3>People renting or buying a home</h3><p>A family can check, before signing, whether an area is one of the hottest in the city, sits on low ground, or is next to a dump. Today that takes local knowledge or luck. Flood exposure in particular can mean years of damage and cost.</p></div>
+    <div class="card"><h3>Residents and welfare associations</h3><p>A ward that is hotter, less green or more flood-exposed than its neighbours now has numbers and a map to show when it asks for trees, drain repairs or a park.</p></div>
+    <div class="card"><h3>Health and daily life</h3><p>Heat and bad air fall hardest on children, older people and outdoor workers. Seeing which wards stay hot at night, and where the nearest air monitor is, helps people and local clinics understand their own risk.</p></div>
+    <div class="card"><h3>Journalists, students and researchers</h3><p>The city’s environmental inequality becomes something anyone can open and quote, ward by ward, with the sources listed.</p></div>
+    <div class="card"><h3>The city itself</h3><p>The gap between BBMP’s flood list and the low-lying land layer is the kind of finding a public map surfaces. It also shows where monitoring is thin: 13 air stations for 243 wards.</p></div>
+    <div class="card"><h3>The property market</h3><p>If buyers start asking about heat and flood exposure, builders and landlords have a reason to care about trees, drainage and open space. That is a slow effect, and the one with the widest reach.</p></div>
+  </div>
+  <h3>What would turn potential into real impact</h3>
+  <ul>
+    <li>People finding it: sharing in resident groups, housing forums and local media</li>
+    <li>Trust: keeping every figure sourced and every weakness stated, as the site does now</li>
+    <li>Staying current: scheduled data refreshes instead of a one-day snapshot</li>
+    <li>Finer detail: locality and street level, where housing decisions are actually made</li>
+  </ul>
+</section>
+
+<section>
+  <div class="kicker">7 · Honest limits and what comes next</div>
+  <h2>What it does not do yet</h2>
+  <div class="cols">
+    <div>
+      <h3>Limits today</h3>
+      <ul>
+        <li><b>Ward level only.</b> Conditions change street by street, especially flooding. A ward figure is an average.</li>
+        <li><b>Air is mostly not live.</b> Government stations reached through OpenAQ were five days behind on launch day. Only one community sensor was current.</li>
+        <li><b>CO₂ and methane are model estimates</b> for the wider region. No public source measures them by neighbourhood.</li>
+        <li><b>Flood layers show exposure, not history.</b> There is no dated record of past floods or fires yet.</li>
+        <li><b>No measured noise or traffic.</b> Major-road density stands in for both.</li>
+        <li><b>No tree count.</b> A satellite tree-cover figure was tried and rejected as unreliable; greenery is the measure used.</li>
+        <li><b>A snapshot.</b> Satellite and map figures were built on 12 October 2026 and do not refresh automatically.</li>
+        <li><b>Non-commercial data terms.</b> Earth Engine and the satellite imagery are free for non-commercial use only.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Next steps, in order</h3>
+      <ol>
+        <li><b>Fresher air data</b> from the government’s own hourly feed (data.gov.in)</li>
+        <li><b>Heat and greenery as zoomable imagery</b>, street by street, instead of one colour per ward</li>
+        <li><b>Fire history</b> from NASA’s fire detection service, and dated flood records</li>
+        <li><b>Real traffic</b> in place of the road-density stand-in</li>
+        <li><b>Weekly automatic refresh</b> of all figures</li>
+        <li><b>Satellite NO₂ and methane</b> for a daily, city-wide view of the air</li>
+        <li><b>Kannada language support</b> and shareable links to a ward</li>
+      </ol>
+      <h3>Decisions for the founder</h3>
+      <ul>
+        <li>Will the site stay free and non-commercial? This decides which data sources can be used.</li>
+        <li>Who should see it first: renters, resident groups or the press?</li>
+        <li>Should the single score stay, or should the layers stand on their own?</li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted small" style="margin-top:6mm">Figures in this note are taken from the live site as built on 12 October 2026. Data credits: NASA / USGS Landsat and MODIS, Copernicus Sentinel-2, MERIT Hydro, BBMP via OpenCity, OpenStreetMap contributors, OpenAQ, Open-Meteo, KGIS and DataMeet. Satellite base map: Sentinel-2 cloudless by EOX.</p>
+</section>
+
+</body>
+</html>

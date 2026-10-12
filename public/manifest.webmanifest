@@ -1,0 +1,9 @@
+{
+  "name": "Bengaluru Environment Map",
+  "short_name": "BLR Environment",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fbfaf6",
+  "theme_color": "#17603f",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
