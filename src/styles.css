@@ -62,6 +62,8 @@ h3 { font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
 .dot.wet-dried { background: #d9952b; }
 .dot.wet-built { background: #c0262d; }
 .toggle + .toggle { margin-top: 6px; }
+.line.power { display: inline-block; width: 16px; height: 3px; border-radius: 2px; background: #d4541c; margin-left: 4px; }
+.source { color: var(--muted); font-size: 11px; margin: -4px 0 10px; }
 
 .ranklist ol { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
 .ranklist button { display: flex; justify-content: space-between; gap: 8px; width: 100%; padding: 7px 12px; border: 0; background: none; text-align: left; }

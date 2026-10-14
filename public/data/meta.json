@@ -29,6 +29,8 @@
       "2026-10-01"
     ],
     "lowland_m": 3,
-    "surface_water": "JRC/GSW1_4 1984-2021"
+    "surface_water": "JRC/GSW1_4 1984-2021",
+    "population_year": 2025,
+    "light_year": "2025"
   }
 }

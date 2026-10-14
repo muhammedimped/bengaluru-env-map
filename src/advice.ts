@@ -1,6 +1,6 @@
 import { metricByKey, rankOf, type MetricKey, type Ward } from './metrics'
 
-export type Concern = 'heat' | 'flood' | 'green' | 'traffic' | 'industry'
+export type Concern = 'heat' | 'flood' | 'green' | 'traffic' | 'industry' | 'power'
 export type Intent = 'rent' | 'buy'
 export type Office = { name: string; lon: number; lat: number }
 
@@ -47,7 +47,7 @@ export const CONCERNS: Record<Concern, ConcernInfo> = {
   green: {
     label: 'Greenery',
     want: 'Greener',
-    metrics: ['ndvi', 'green_pct', 'water_pct'],
+    metrics: ['tree_pct', 'ndvi', 'green_pct', 'water_pct'],
     good: 'Leafy, with parks or lakes nearby',
     impact: 'Hotter streets and fewer pleasant places to walk. It affects comfort, not safety.',
     helps: {
@@ -81,6 +81,19 @@ export const CONCERNS: Record<Concern, ConcernInfo> = {
       buy: 'Visit at different times of day, morning and evening. Check which side the dump or industry is on: monsoon winds blow from the west and south-west, winter winds from the east.',
     },
     reach: 'area',
+  },
+  power: {
+    label: 'Power lines',
+    want: 'Away from power lines',
+    metrics: ['power_pct'],
+    good: 'Few homes near high-tension lines',
+    impact:
+      'Only the homes right beside or under a high-tension line are affected: hum in damp weather, building restrictions and lower resale value. Health effects from the fields are not established. A few streets away it makes no difference.',
+    helps: {
+      rent: 'Turn on the power-line layer and pick a building at least a street away from the line. It is easy to see from the balcony when you visit.',
+      buy: 'Turn on the power-line layer and keep well clear of the line corridor. Construction under or beside these lines is restricted, so check that the building’s approvals are in order, and expect lower resale value close by.',
+    },
+    reach: 'home',
   },
 }
 
@@ -140,7 +153,7 @@ export function suggest(
   priorities: Concern[],
 ): { options: Option[]; reachable: number; leftOut: Ward[] } {
   const weight = (c: Concern) =>
-    (c === 'traffic' || c === 'industry' ? 0.7 : 1) * (intent === 'buy' && c === 'flood' ? 1.5 : 1) * (priorities.includes(c) ? 2.5 : 1)
+    (c === 'power' ? 0.5 : c === 'traffic' || c === 'industry' ? 0.7 : 1) * (intent === 'buy' && c === 'flood' ? 1.5 : 1) * (priorities.includes(c) ? 2.5 : 1)
   const near = wards
     .map((ward) => ({ ward, km: kmBetween(office.lat, office.lon, ward.lat, ward.lon) }))
     .filter((x) => x.km <= maxKm)

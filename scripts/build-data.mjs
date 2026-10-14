@@ -10,7 +10,8 @@
 //             and OpenStreetMap storm drains / streams
 //   earth engine – optional data/raw/ee-wards.json from scripts/ee_wards.py: 30 m Landsat heat,
 //             10 m Sentinel-2 greenery and low-lying land. Replaces the MODIS day heat and NDVI.
-//             Also data/raw/ee-wetlands.geojson: JRC surface water lost since 1984 and still there.
+//             Also tree cover, population, night lights, and data/raw/ee-wetlands.geojson:
+//             JRC surface water lost since 1984 and still there.
 //   places  – OpenStreetMap localities and metro stations, for search
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -200,6 +201,8 @@ const placesRaw = await overpass(
 )
 
 const drainsRaw = await overpass('osm-drains.json', `way["waterway"~"^(drain|stream|canal|river|ditch)$"];out geom;`)
+// Overhead high-tension lines; "minor_line" is the low-voltage street distribution network.
+const powerRaw = await overpass('osm-power.json', `way["power"="line"];out geom;`)
 
 const OPENCITY = 'https://data.opencity.in/dataset/b03218ea-4b7c-4fa9-ab67-b9054d7ecc4c/resource'
 const FLOOD_SETS = [
@@ -257,27 +260,33 @@ for (const f of osmtogeojson(landRaw).features) {
 const dumps = sites.filter((s) => s.kind === 'waste')
 const roads = roadsRaw.elements.filter((e) => e.geometry).map((e) => e.geometry.map((p) => [p.lon, p.lat]))
 
-// Drains as a set of ~50 m grid cells, so "is this point near a drain" is a 3×3 lookup.
+// Lines as a set of ~50 m grid cells, so "is this point near a drain" is a 3×3 lookup.
 const CELL_M = 50
 const cellOf = (x, y) => [Math.floor((x * M_PER_DEG_LON) / CELL_M), Math.floor((y * M_PER_DEG_LAT) / CELL_M)]
-const drainCells = new Set()
-for (const e of drainsRaw.elements) {
-  if (!e.geometry) continue
-  for (let i = 1; i < e.geometry.length; i++) {
-    const a = e.geometry[i - 1]
-    const b = e.geometry[i]
-    const pieces = Math.max(1, Math.ceil(distM(a.lon, a.lat, b.lon, b.lat) / 20))
-    for (let k = 0; k <= pieces; k++) {
-      const t = k / pieces
-      drainCells.add(cellOf(a.lon + (b.lon - a.lon) * t, a.lat + (b.lat - a.lat) * t).join(','))
+const cellsAlong = (elements) => {
+  const cells = new Set()
+  for (const e of elements) {
+    if (!e.geometry) continue
+    for (let i = 1; i < e.geometry.length; i++) {
+      const a = e.geometry[i - 1]
+      const b = e.geometry[i]
+      const pieces = Math.max(1, Math.ceil(distM(a.lon, a.lat, b.lon, b.lat) / 20))
+      for (let k = 0; k <= pieces; k++) {
+        const t = k / pieces
+        cells.add(cellOf(a.lon + (b.lon - a.lon) * t, a.lat + (b.lat - a.lat) * t).join(','))
+      }
     }
   }
+  return cells
 }
-const nearDrain = (x, y) => {
+const nearCells = (cells) => (x, y) => {
   const [cx, cy] = cellOf(x, y)
-  for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if (drainCells.has(`${cx + dx},${cy + dy}`)) return true
+  for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) if (cells.has(`${cx + dx},${cy + dy}`)) return true
   return false
 }
+const drainCells = cellsAlong(drainsRaw.elements)
+const nearDrain = nearCells(drainCells)
+const nearPower = nearCells(cellsAlong(powerRaw.elements))
 
 const stepLon = SAMPLE_M / M_PER_DEG_LON
 const stepLat = SAMPLE_M / M_PER_DEG_LAT
@@ -292,11 +301,13 @@ const wards = wardsRaw.features.map((f) => {
   let n = 0, cx = 0, cy = 0
   let wasteM = Infinity
   let drainHits = 0
+  let powerHits = 0
   for (let y = box[1] + stepLat / 2; y < box[3]; y += stepLat)
     for (let x = box[0] + stepLon / 2; x < box[2]; x += stepLon) {
       if (!inPolys(x, y, polys)) continue
       n++, (cx += x), (cy += y)
       if (nearDrain(x, y)) drainHits++
+      if (nearPower(x, y)) powerHits++
       for (const k of Object.keys(hits)) if (near[k].some((p) => inBox(x, y, p.box) && inPolys(x, y, p.polys))) hits[k]++
       for (const [arr, at] of [[day, dayAt], [night, nightAt], [veg, ndviAt]]) {
         const v = at(x, y)
@@ -327,6 +338,7 @@ const wards = wardsRaw.features.map((f) => {
       parks: 0,
       flood_spots: 0,
       drain_pct: n ? +((100 * drainHits) / n).toFixed(1) : null,
+      power_pct: n ? +((100 * powerHits) / n).toFixed(1) : null,
     },
   }
 })
@@ -381,6 +393,9 @@ for (const { props: p } of wards) {
   if (e?.lst != null) p.lst_day = +e.lst.toFixed(1)
   if (e?.ndvi != null) p.ndvi = +e.ndvi.toFixed(3)
   p.lost_wetland_pct = e?.wetland_built != null ? +(100 * (e.wetland_built + e.wetland_dried)).toFixed(2) : null
+  p.tree_pct = e?.trees != null ? +(100 * e.trees).toFixed(1) : null
+  p.people_per_km2 = e?.people != null && p.area_km2 ? Math.round(e.people / p.area_km2 / 100) * 100 : null
+  p.night_light = e?.light != null ? +e.light.toFixed(1) : null
 }
 if (!ee) console.log('no data/raw/ee-wards.json: using MODIS heat and greenery, no lowland figure')
 
@@ -436,6 +451,20 @@ if (wetlands) {
   for (const f of wetlands.features) f.geometry.coordinates = round(f.geometry.coordinates)
   await fs.writeFile(path.join(OUT, 'wetlands.geojson'), JSON.stringify(wetlands))
 }
+const kv = (v) => Math.max(0, ...String(v ?? '').split(';').map((x) => Math.round(+x / 1000) || 0)) || null
+await fs.writeFile(
+  path.join(OUT, 'power.geojson'),
+  JSON.stringify({
+    type: 'FeatureCollection',
+    features: powerRaw.elements
+      .filter((e) => e.geometry)
+      .map((e) => ({
+        type: 'Feature',
+        properties: { kv: kv(e.tags?.voltage) },
+        geometry: { type: 'LineString', coordinates: round(e.geometry.map((g) => [g.lon, g.lat])) },
+      })),
+  }),
+)
 await fs.writeFile(path.join(OUT, 'meta.json'), JSON.stringify(meta, null, 2))
 
 const by = (k) => [...wards].filter((w) => w.props[k] != null).sort((a, b) => b.props[k] - a.props[k])
@@ -444,6 +473,10 @@ console.log(`wards ${wards.length} · waste/sewage sites ${sites.length} · road
 console.log(`places: ${places.filter((p) => p.kind === 'locality').length} localities · ${places.filter((p) => p.kind === 'metro').length} metro stations`)
 console.log(`flood spots ${floodSpots.length} · drain cells ${drainCells.size}`)
 console.log('most low-lying  :', show(by('lowland_pct').slice(0, 8), 'lowland_pct'))
+console.log('most trees  :', show(by('tree_pct').slice(0, 6), 'tree_pct'))
+console.log('most crowded:', show(by('people_per_km2').slice(0, 6), 'people_per_km2'))
+console.log('brightest   :', show(by('night_light').slice(0, 6), 'night_light'))
+console.log('near HT lines:', show(by('power_pct').slice(0, 6), 'power_pct'))
 console.log('most lost wetland:', show(by('lost_wetland_pct').slice(0, 8), 'lost_wetland_pct'))
 console.log('most flood spots:', show(by('flood_spots').slice(0, 8), 'flood_spots'))
 console.log('hottest day :', show(by('lst_day').slice(0, 5), 'lst_day'))

@@ -83,7 +83,7 @@ export default function Finder(p: Props) {
           <p className="hint">
             {p.result.reachable} wards have their centre within {p.maxKm} km (straight line).
             {p.result.leftOut.length > 0 &&
-              ` Left out ${p.result.leftOut.length} that are poor on almost everything: ${p.result.leftOut.map((w) => w.name).join(', ')}.`}
+              ` Left out ${p.result.leftOut.length} that are poor on most things: ${p.result.leftOut.map((w) => w.name).join(', ')}.`}
           </p>
           {shown.length === 0 && <p className="hint">No suitable wards this close. Try a longer distance.</p>}
           {shown.length > 0 && <p className="hint">Best fit first; when two are close, the nearer one wins.</p>}

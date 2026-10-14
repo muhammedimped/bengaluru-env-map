@@ -49,7 +49,7 @@ type Air = {
 // The library looks for its worker next to its own bundle, which a bundler moves.
 maplibregl.setWorkerUrl(workerUrl)
 
-type BasemapKey = 'light' | 'streets' | 'dark' | 'satellite'
+type BasemapKey = 'light' | 'streets' | 'dark' | 'satellite' | 'night'
 const BASEMAPS: { key: BasemapKey; label: string; style: string | StyleSpecification }[] = [
   { key: 'light', label: 'Light', style: 'https://tiles.openfreemap.org/styles/positron' },
   { key: 'streets', label: 'Streets', style: 'https://tiles.openfreemap.org/styles/liberty' },
@@ -72,7 +72,11 @@ const BASEMAPS: { key: BasemapKey; label: string; style: string | StyleSpecifica
       layers: [{ id: 'satellite', type: 'raster', source: 'satellite' }],
     },
   },
+  // The dark map with the satellite night-lights image laid over it (see NIGHT_BOUNDS).
+  { key: 'night', label: 'Night lights', style: 'https://tiles.openfreemap.org/styles/dark' },
 ]
+/** Must match BOUNDS in scripts/ee_nightlights.py: west, south, east, north. */
+const NIGHT_BOUNDS = [77.3, 12.7, 77.95, 13.3] as const
 const WARD_LAYERS = ['ward-fill', 'ward-3d']
 const DOT_LAYERS = ['stations', 'sites', 'flood-sites']
 /** Tallest ward column in 3D view, in metres. The city is ~35 km across. */
@@ -174,6 +178,7 @@ export default function App() {
   const [showSites, setShowSites] = useState(() => !isMobile())
   const [showFlood, setShowFlood] = useState(() => !isMobile())
   const [showWetlands, setShowWetlands] = useState(false)
+  const [showPower, setShowPower] = useState(false)
   const [sheet, setSheet] = useState<Sheet>('peek')
   const [locating, setLocating] = useState<'idle' | 'busy' | string>('idle')
   const dragFrom = useRef<number | null>(null)
@@ -278,6 +283,27 @@ export default function App() {
     if (!map || !ready || !data || map.getSource('wards')) return
     const firstLabel = map.getStyle().layers.find((l) => l.type === 'symbol')?.id
     map.addSource('wards', { type: 'geojson', data, promoteId: 'id' })
+    const [w, s, e, n] = NIGHT_BOUNDS
+    map.addSource('nightlights', {
+      type: 'image',
+      url: '/data/nightlights.png',
+      coordinates: [[w, n], [e, n], [e, s], [w, s]],
+    })
+    map.addLayer(
+      {
+        id: 'nightlights',
+        type: 'raster',
+        source: 'nightlights',
+        layout: { visibility: loadedBasemap.current === 'night' ? 'visible' : 'none' },
+        // The pixels are ~460 m; blending them reads as glow rather than blocks.
+        paint: { 'raster-resampling': 'linear', 'raster-opacity': 0.9, 'raster-fade-duration': 0 },
+      },
+      firstLabel,
+    )
+    // This base style draws roads above its first label, so above the glow; fade them back.
+    if (loadedBasemap.current === 'night')
+      for (const l of map.getStyle().layers)
+        if (l.type === 'line' && /^(highway|road|railway|bridge|tunnel)/.test(l.id)) map.setPaintProperty(l.id, 'line-opacity', 0.25)
     map.addLayer({ id: 'ward-fill', type: 'fill', source: 'wards', paint: { 'fill-color': '#ccc', 'fill-opacity': 0.78 } }, firstLabel)
     map.addLayer({ id: 'ward-line', type: 'line', source: 'wards', paint: { 'line-color': '#ffffff', 'line-width': 0.6, 'line-opacity': 0.7 } }, firstLabel)
     map.addLayer({
@@ -307,6 +333,18 @@ export default function App() {
         'fill-color': ['match', ['get', 'kind'], 'built', '#c0262d', 'dried', '#d9952b', '#1f6fd1'],
         'fill-opacity': 0.9,
         'fill-antialias': false,
+      },
+    })
+    map.addSource('power', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+    map.addLayer({
+      id: 'power',
+      type: 'line',
+      source: 'power',
+      layout: { visibility: 'none', 'line-cap': 'round' },
+      paint: {
+        'line-color': '#d4541c',
+        // Thicker for higher voltage: 66 kV, 220 kV, 400 kV.
+        'line-width': ['interpolate', ['linear'], ['zoom'], 10, ['step', ['coalesce', ['get', 'kv'], 66], 1, 200, 1.6, 300, 2.2], 15, ['step', ['coalesce', ['get', 'kv'], 66], 2.5, 200, 4, 300, 5.5]],
       },
     })
     map.addSource('sites', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -472,7 +510,10 @@ export default function App() {
     const colour = fillColour(metric, breaks, colours)
     map.setPaintProperty('ward-fill', 'fill-color', colour)
     // Imagery, and the wetland outlines, should show through.
-    map.setPaintProperty('ward-fill', 'fill-opacity', showWetlands ? 0.4 : basemap === 'satellite' ? 0.55 : 0.78)
+    // In the night view the glow is the picture; wards stay as outlines you can still hover and tap.
+    map.setPaintProperty('ward-fill', 'fill-opacity', basemap === 'night' ? 0 : showWetlands ? 0.4 : basemap === 'satellite' ? 0.55 : 0.78)
+    map.setLayoutProperty('nightlights', 'visibility', basemap === 'night' ? 'visible' : 'none')
+    map.setPaintProperty('ward-line', 'line-opacity', basemap === 'night' ? 0.35 : 0.7)
     map.setLayoutProperty('ward-fill', 'visibility', threeD ? 'none' : 'visible')
     map.setLayoutProperty('ward-3d', 'visibility', threeD ? 'visible' : 'none')
     // The flat outline sits on the ground, away from where the raised block appears.
@@ -511,6 +552,15 @@ export default function App() {
     if (visible) source.setData('/data/wetlands.geojson')
     map.setLayoutProperty('wetlands', 'visibility', visible ? 'visible' : 'none')
   }, [epoch, data, showWetlands, threeD])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const source = map?.getSource('power') as GeoJSONSource | undefined
+    if (!map || !ready || !source) return
+    const visible = showPower && !threeD
+    if (visible) source.setData('/data/power.geojson')
+    map.setLayoutProperty('power', 'visibility', visible ? 'visible' : 'none')
+  }, [epoch, data, showPower, threeD])
 
   useEffect(() => {
     const map = mapRef.current
@@ -795,6 +845,7 @@ export default function App() {
                     setMetricKey(m.key)
                     // The ward shares only make sense next to the outlines they come from.
                     if (m.key === 'lost_wetland_pct') setShowWetlands(true)
+                    if (m.key === 'power_pct') setShowPower(true)
                   }}
                 >
                   {m.label}
@@ -802,6 +853,7 @@ export default function App() {
               ))}
             </div>
             <p className="about">{metric.about}</p>
+            <p className="source">Source: {metric.source}</p>
             <Legend metric={metric} breaks={breaks} colours={colours} />
             <label className="toggle">
               <input type="checkbox" checked={showSites} onChange={(e) => setShowSites(e.target.checked)} />
@@ -815,6 +867,10 @@ export default function App() {
               <input type="checkbox" checked={showWetlands} onChange={(e) => setShowWetlands(e.target.checked)} />
               Wetlands since 1984: <span className="dot wet-water" /> still water <span className="dot wet-dried" /> dried or choked{' '}
               <span className="dot wet-built" /> built over
+            </label>
+            <label className="toggle">
+              <input type="checkbox" checked={showPower} onChange={(e) => setShowPower(e.target.checked)} />
+              <span className="line power" /> High-tension power lines (66–400 kV)
             </label>
             {stations.length > 0 && (
               <label className="toggle">
@@ -879,6 +935,18 @@ export default function App() {
                 <b>Lost wetland:</b> EC JRC Global Surface Water 1984–2021 (Landsat, 30 m), lakes and marshes that held water and later stopped. Split into built over or dried / choked using Google Dynamic World land cover for {meta?.earth_engine ? `${meta.earth_engine.land_cover[0]} to ${meta.earth_engine.land_cover[1]}` : 'the last year'}. Weed-covered lakes such as Bellandur read as lost water.
               </li>
               <li>
+                <b>Tree cover:</b> ESA WorldCover 2021 (10 m, CC BY 4.0).
+              </li>
+              <li>
+                <b>Crowding:</b> EC JRC GHSL population grid, 2025 estimate (100 m, CC BY 4.0).
+              </li>
+              <li>
+                <b>Light at night:</b> NOAA VIIRS annual night-time lights, 2025 (about 500 m).
+              </li>
+              <li>
+                <b>Power lines:</b> OpenStreetMap overhead lines tagged power=line. Unmapped lines are missed.
+              </li>
+              <li>
                 <b>Parks, lakes, industry, roads, waste sites:</b> OpenStreetMap contributors. Coverage depends on what volunteers have mapped.
               </li>
               <li>
@@ -900,7 +968,7 @@ export default function App() {
                 <b>Ward boundaries:</b> BBMP 243-ward delimitation via KGIS / DataMeet.
               </li>
             </ul>
-            <p>Not covered yet: measured noise, traffic counts, dated flood and fire history, tree census.</p>
+            <p>Not covered yet: measured noise, traffic counts, dated flood and fire history, a street-level tree census.</p>
             {meta && <p>Data built {meta.generated}.</p>}
           </details>
         </footer>
@@ -928,6 +996,8 @@ export default function App() {
                   onClick={() => {
                     setBasemap(b.key)
                     setMenuOpen(false)
+                    // Hovering a ward in the night view should report how bright it is.
+                    if (b.key === 'night' && !finding) setMetricKey('night_light')
                   }}
                 >
                   {b.label}
