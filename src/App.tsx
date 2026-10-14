@@ -3,6 +3,8 @@ import * as maplibregl from 'maplibre-gl'
 import type { ExpressionSpecification, GeoJSONSource, MapGeoJSONFeature, Map as MlMap, StyleSpecification } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
 import type { FeatureCollection, Point, Polygon } from 'geojson'
+import Finder from './Finder'
+import { kmBetween, suggest, type Concern, type Intent, type Office } from './advice'
 import { METRICS, breaksFor, coloursFor, format, metricByKey, rankOf, type Metric, type MetricKey, type Ward } from './metrics'
 
 type Site = { kind: 'waste' | 'sewage' | 'flood'; label: string; name: string | null; lon: number; lat: number }
@@ -25,7 +27,13 @@ type Meta = {
   lst_dates: [string, string]
   ndvi_dates: [string, string]
   night_dates?: [string, string]
-  earth_engine: { landsat_scenes: number; sentinel2_scenes: number; summer: [string, string]; dry_season: [string, string] } | null
+  earth_engine: {
+    landsat_scenes: number
+    sentinel2_scenes: number
+    summer: [string, string]
+    dry_season: [string, string]
+    land_cover: [string, string]
+  } | null
 }
 type WardCollection = FeatureCollection<Polygon, Ward>
 type Air = {
@@ -87,12 +95,18 @@ function ago(iso: string): string {
   return `${Math.round(hours / 24)} days ago`
 }
 const isFresh = (iso: string) => Date.now() - Date.parse(iso) < 6 * 3600000
-const kmBetween = (aLat: number, aLon: number, bLat: number, bLon: number) =>
-  Math.hypot((aLon - bLon) * 111.32 * Math.cos((aLat * Math.PI) / 180), (aLat - bLat) * 110.57)
 
 const isMobile = () => window.matchMedia('(max-width: 760px)').matches
 type Sheet = 'peek' | 'half' | 'full'
 const SHEETS: Sheet[] = ['peek', 'half', 'full']
+
+/** A circle of `km` around a point, as a lon/lat ring. */
+function circle(lon: number, lat: number, km: number): number[][] {
+  return Array.from({ length: 65 }, (_, i) => {
+    const a = (i / 64) * 2 * Math.PI
+    return [lon + (km * Math.cos(a)) / (111.32 * Math.cos((lat * Math.PI) / 180)), lat + (km * Math.sin(a)) / 110.57]
+  })
+}
 
 function inRing(x: number, y: number, ring: number[][]) {
   let inside = false
@@ -159,6 +173,7 @@ export default function App() {
   // Hundreds of dots swamp a phone-sized map, so they start hidden there.
   const [showSites, setShowSites] = useState(() => !isMobile())
   const [showFlood, setShowFlood] = useState(() => !isMobile())
+  const [showWetlands, setShowWetlands] = useState(false)
   const [sheet, setSheet] = useState<Sheet>('peek')
   const [locating, setLocating] = useState<'idle' | 'busy' | string>('idle')
   const dragFrom = useRef<number | null>(null)
@@ -167,12 +182,22 @@ export default function App() {
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState<Place[]>([])
   const [focus, setFocus] = useState<Place | null>(null)
+  const [mode, setMode] = useState<'explore' | 'find'>('explore')
+  const [office, setOffice] = useState<Office | null>(null)
+  const [maxKm, setMaxKm] = useState(8)
+  const [intent, setIntent] = useState<Intent>('rent')
+  const [priorities, setPriorities] = useState<Concern[]>([])
 
   const metric = metricByKey(metricKey)
   const wards = useMemo(() => data?.features.map((f) => f.properties) ?? [], [data])
   const breaks = useMemo(() => breaksFor(wards, metric), [wards, metric])
   const colours = useMemo(() => coloursFor(metric, breaks), [metric, breaks])
   const selected = wards.find((w) => w.id === selectedId) ?? null
+  const finding = mode === 'find'
+  const suggestion = useMemo(
+    () => (finding && office && wards.length ? suggest(wards, office, maxKm, intent, priorities) : null),
+    [finding, office, wards, maxKm, intent, priorities],
+  )
 
   // 3D column height for a ward, shared by the map paint and by click picking so they agree.
   const columns = useMemo(() => {
@@ -195,8 +220,8 @@ export default function App() {
   )
 
   // The map's event handlers are bound once, so they read current state through this ref.
-  const live = useRef({ threeD, columns, wardIndex })
-  live.current = { threeD, columns, wardIndex }
+  const live = useRef({ threeD, columns, wardIndex, finding, office })
+  live.current = { threeD, columns, wardIndex, finding, office }
   const fitOnSelect = useRef(true)
 
   useEffect(() => {
@@ -271,6 +296,19 @@ export default function App() {
         'line-width': ['case', ['boolean', ['feature-state', 'selected'], false], 3, ['boolean', ['feature-state', 'hover'], false], 1.5, 0],
       },
     })
+    // Fetched by the map itself, and only once the layer is first shown.
+    map.addSource('wetlands', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+    map.addLayer({
+      id: 'wetlands',
+      type: 'fill',
+      source: 'wetlands',
+      layout: { visibility: 'none' },
+      paint: {
+        'fill-color': ['match', ['get', 'kind'], 'built', '#c0262d', 'dried', '#d9952b', '#1f6fd1'],
+        'fill-opacity': 0.9,
+        'fill-antialias': false,
+      },
+    })
     map.addSource('sites', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
     map.addLayer({
       id: 'flood-sites',
@@ -295,6 +333,16 @@ export default function App() {
         'circle-stroke-color': '#fff',
         'circle-stroke-width': 1.2,
       },
+    })
+
+    // Home finder: everything beyond commuting distance is washed out.
+    map.addSource('reach', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
+    map.addLayer({ id: 'reach-mask', type: 'fill', source: 'reach', paint: { 'fill-color': '#fbfaf6', 'fill-opacity': 0.7 } })
+    map.addLayer({
+      id: 'reach-line',
+      type: 'line',
+      source: 'reach',
+      paint: { 'line-color': '#14211b', 'line-width': 1.5, 'line-dasharray': [3, 2] },
     })
 
     map.addSource('stations', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } })
@@ -402,6 +450,12 @@ export default function App() {
       popup.remove()
       const ward = wardUnder(e.point)
       if (!ward) return
+      // Looking for a home: the first tap marks the office.
+      if (live.current.finding && !live.current.office) {
+        setOffice({ name: `A point in ${ward.name}`, lon: e.lngLat.lng, lat: e.lngLat.lat })
+        setSheet('half')
+        return
+      }
       // In 3D the tapped block lights up where it stands; swinging the camera would lose it.
       fitOnSelect.current = !live.current.threeD
       setFocus(null)
@@ -417,8 +471,8 @@ export default function App() {
     if (!map || !ready || !map.getLayer('ward-fill')) return
     const colour = fillColour(metric, breaks, colours)
     map.setPaintProperty('ward-fill', 'fill-color', colour)
-    // Imagery should show through on the satellite base map.
-    map.setPaintProperty('ward-fill', 'fill-opacity', basemap === 'satellite' ? 0.55 : 0.78)
+    // Imagery, and the wetland outlines, should show through.
+    map.setPaintProperty('ward-fill', 'fill-opacity', showWetlands ? 0.4 : basemap === 'satellite' ? 0.55 : 0.78)
     map.setLayoutProperty('ward-fill', 'visibility', threeD ? 'none' : 'visible')
     map.setLayoutProperty('ward-3d', 'visibility', threeD ? 'visible' : 'none')
     // The flat outline sits on the ground, away from where the raised block appears.
@@ -434,7 +488,7 @@ export default function App() {
         ? ['interpolate', ['linear'], ['coalesce', ['get', metric.key], min], min, 60, max, MAX_COLUMN_M]
         : 60,
     )
-  }, [epoch, data, columns, metric, breaks, colours, basemap, threeD])
+  }, [epoch, data, columns, metric, breaks, colours, basemap, threeD, showWetlands])
 
   useEffect(() => {
     const map = mapRef.current
@@ -448,6 +502,68 @@ export default function App() {
     map.setLayoutProperty('sites', 'visibility', showSites && !threeD ? 'visible' : 'none')
     map.setLayoutProperty('flood-sites', 'visibility', showFlood && !threeD ? 'visible' : 'none')
   }, [epoch, data, sites, showSites, showFlood, threeD])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const source = map?.getSource('wetlands') as GeoJSONSource | undefined
+    if (!map || !ready || !source) return
+    const visible = showWetlands && !threeD
+    if (visible) source.setData('/data/wetlands.geojson')
+    map.setLayoutProperty('wetlands', 'visibility', visible ? 'visible' : 'none')
+  }, [epoch, data, showWetlands, threeD])
+
+  useEffect(() => {
+    const map = mapRef.current
+    const source = map?.getSource('reach') as GeoJSONSource | undefined
+    if (!map || !ready || !source) return
+    const ring = finding && office ? circle(office.lon, office.lat, maxKm) : null
+    source.setData({
+      type: 'FeatureCollection',
+      features: ring
+        ? [
+            {
+              type: 'Feature',
+              properties: {},
+              // The world with a hole cut out where the commute reaches.
+              geometry: { type: 'Polygon', coordinates: [[[-180, -85], [180, -85], [180, 85], [-180, 85], [-180, -85]], [...ring].reverse()] },
+            },
+          ]
+        : [],
+    })
+  }, [epoch, data, finding, office, maxKm])
+
+  // Office pin and numbered suggestions.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !finding || !office) return
+    const pin = document.createElement('div')
+    pin.className = 'pin office'
+    pin.title = `Office: ${office.name}`
+    const markers = [new maplibregl.Marker({ element: pin }).setLngLat([office.lon, office.lat]).addTo(map)]
+    suggestion?.options.slice(0, 6).forEach((o, i) => {
+      const el = document.createElement('button')
+      el.className = 'option-marker'
+      el.textContent = String(i + 1)
+      el.title = `${o.ward.name}: fit ${o.fit}/100`
+      el.addEventListener('click', (e) => {
+        e.stopPropagation()
+        setSelectedId(o.ward.id)
+        setSheet('half')
+      })
+      markers.push(new maplibregl.Marker({ element: el }).setLngLat([o.ward.lon, o.ward.lat]).addTo(map))
+    })
+    return () => markers.forEach((m) => m.remove())
+  }, [finding, office, suggestion])
+
+  // Frame the commute circle when the office or distance changes.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !finding || !office) return
+    const b = new maplibregl.LngLatBounds()
+    circle(office.lon, office.lat, maxKm).forEach((c) => b.extend(c as [number, number]))
+    const padding = isMobile() ? { top: 80, bottom: Math.round(window.innerHeight * 0.5), left: 20, right: 20 } : 60
+    map.fitBounds(b, { padding, duration: 600 })
+  }, [finding, office, maxKm])
 
   useEffect(() => {
     const map = mapRef.current
@@ -528,10 +644,27 @@ export default function App() {
   }, [query, wards, places])
 
   const pick = (hit: Hit) => {
+    if (finding) {
+      const ward = wards.find((w) => w.id === hit.ward)
+      const at = hit.place ?? ward
+      if (at) setOffice({ name: hit.name, lon: at.lon, lat: at.lat })
+      setSelectedId(null)
+      setSheet('half')
+      setQuery('')
+      return
+    }
     setFocus(hit.place ?? null)
     setSelectedId(hit.ward)
     setSheet('half')
     setQuery('')
+  }
+
+  const switchMode = (next: 'explore' | 'find') => {
+    setMode(next)
+    setSelectedId(null)
+    setFocus(null)
+    // The overall score is the natural backdrop for comparing places to live.
+    if (next === 'find') setMetricKey('score')
   }
 
   const stepSheet = (by: number) => setSheet((s) => SHEETS[Math.min(2, Math.max(0, SHEETS.indexOf(s) + by))])
@@ -544,6 +677,11 @@ export default function App() {
         const here = data?.features.find((f) => inRing(coords.longitude, coords.latitude, f.geometry.coordinates[0]))
         if (!here) return setLocating('You appear to be outside the Bengaluru wards on this map.')
         setLocating('idle')
+        if (finding) {
+          setOffice({ name: 'Your current location', lon: coords.longitude, lat: coords.latitude })
+          setSheet('half')
+          return
+        }
         setFocus({ kind: 'locality', name: 'Your location', lon: coords.longitude, lat: coords.latitude, ward: here.properties.id })
         setSelectedId(here.properties.id)
         setSheet('half')
@@ -579,10 +717,19 @@ export default function App() {
           <p className="tagline">What a rental listing won’t tell you: heat, greenery, lakes, industry and air, ward by ward.</p>
         </header>
 
+        <div className="modes" role="tablist">
+          <button role="tab" aria-selected={!finding} className={finding ? '' : 'on'} onClick={() => switchMode('explore')}>
+            Explore the map
+          </button>
+          <button role="tab" aria-selected={finding} className={finding ? 'on' : ''} onClick={() => switchMode('find')}>
+            Find a home near work
+          </button>
+        </div>
+
         <div className="search">
           <input
             type="search"
-            placeholder="Search a locality, metro station or ward"
+            placeholder={finding ? 'Where is your office? Locality, metro or ward' : 'Search a locality, metro station or ward'}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             aria-label="Search localities, metro stations and wards"
@@ -607,36 +754,80 @@ export default function App() {
           )}
         </div>
 
-        <section>
-          <h2>Show on map</h2>
-          <div className="chips">
-            {METRICS.map((m) => (
-              <button key={m.key} className={m.key === metricKey ? 'chip on' : 'chip'} onClick={() => setMetricKey(m.key)}>
-                {m.label}
-              </button>
-            ))}
-          </div>
-          <p className="about">{metric.about}</p>
-          <Legend metric={metric} breaks={breaks} colours={colours} />
-          <label className="toggle">
-            <input type="checkbox" checked={showSites} onChange={(e) => setShowSites(e.target.checked)} />
-            <span className="dot waste" /> Landfills &amp; dumps <span className="dot sewage" /> Sewage plants
-          </label>
-          <label className="toggle">
-            <input type="checkbox" checked={showFlood} onChange={(e) => setShowFlood(e.target.checked)} />
-            <span className="dot flood" /> BBMP flood spots
-          </label>
-          {stations.length > 0 && (
+        {finding && selected && (
+          <WardCard
+            ward={selected}
+            wards={wards}
+            active={metric}
+            via={null}
+            stations={stations}
+            onPick={setMetricKey}
+            onClose={() => setSelectedId(null)}
+          />
+        )}
+        {finding && (
+          <Finder
+            office={office}
+            maxKm={maxKm}
+            intent={intent}
+            priorities={priorities}
+            result={suggestion}
+            onMaxKm={setMaxKm}
+            onIntent={setIntent}
+            onPriorities={setPriorities}
+            onClearOffice={() => setOffice(null)}
+            onPick={(id) => {
+              setSelectedId(id)
+              setSheet('half')
+            }}
+          />
+        )}
+
+        {!finding && (
+          <section>
+            <h2>Show on map</h2>
+            <div className="chips">
+              {METRICS.map((m) => (
+                <button
+                  key={m.key}
+                  className={m.key === metricKey ? 'chip on' : 'chip'}
+                  onClick={() => {
+                    setMetricKey(m.key)
+                    // The ward shares only make sense next to the outlines they come from.
+                    if (m.key === 'lost_wetland_pct') setShowWetlands(true)
+                  }}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+            <p className="about">{metric.about}</p>
+            <Legend metric={metric} breaks={breaks} colours={colours} />
             <label className="toggle">
-              <input type="checkbox" checked={showStations} onChange={(e) => setShowStations(e.target.checked)} />
-              <span className="dot station" /> Air stations, coloured by PM2.5 (grey = no recent report)
+              <input type="checkbox" checked={showSites} onChange={(e) => setShowSites(e.target.checked)} />
+              <span className="dot waste" /> Landfills &amp; dumps <span className="dot sewage" /> Sewage plants
             </label>
-          )}
-        </section>
+            <label className="toggle">
+              <input type="checkbox" checked={showFlood} onChange={(e) => setShowFlood(e.target.checked)} />
+              <span className="dot flood" /> BBMP flood spots
+            </label>
+            <label className="toggle">
+              <input type="checkbox" checked={showWetlands} onChange={(e) => setShowWetlands(e.target.checked)} />
+              Wetlands since 1984: <span className="dot wet-water" /> still water <span className="dot wet-dried" /> dried or choked{' '}
+              <span className="dot wet-built" /> built over
+            </label>
+            {stations.length > 0 && (
+              <label className="toggle">
+                <input type="checkbox" checked={showStations} onChange={(e) => setShowStations(e.target.checked)} />
+                <span className="dot station" /> Air stations, coloured by PM2.5 (grey = no recent report)
+              </label>
+            )}
+          </section>
+        )}
 
         {error && <p className="error">{error}</p>}
 
-        {selected ? (
+        {finding ? null : selected ? (
           <WardCard
             ward={selected}
             wards={wards}
@@ -683,6 +874,9 @@ export default function App() {
               </li>
               <li>
                 <b>Low-lying land:</b> MERIT Hydro height above nearest drainage (90 m). Landsat, Sentinel-2 and MERIT are processed with Google Earth Engine.
+              </li>
+              <li>
+                <b>Lost wetland:</b> EC JRC Global Surface Water 1984–2021 (Landsat, 30 m), lakes and marshes that held water and later stopped. Split into built over or dried / choked using Google Dynamic World land cover for {meta?.earth_engine ? `${meta.earth_engine.land_cover[0]} to ${meta.earth_engine.land_cover[1]}` : 'the last year'}. Weed-covered lakes such as Bellandur read as lost water.
               </li>
               <li>
                 <b>Parks, lakes, industry, roads, waste sites:</b> OpenStreetMap contributors. Coverage depends on what volunteers have mapped.

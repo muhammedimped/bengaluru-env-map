@@ -11,6 +11,10 @@ scripts/build-data.mjs merges the result when the file exists.
             and share that is "built"
   lowland   MERIT Hydro height above nearest drainage, 90 m: share of the ward less than
             LOWLAND_M above the drainage line it would flood from
+  wetlands  JRC Global Surface Water 1984–2021 (Landsat, 30 m): water and wetland that has since
+            disappeared, split by today's Dynamic World class into "built over" and "dried out or
+            choked by weeds", plus water that is still there. Shares per ward, and the outlines
+            themselves in data/raw/ee-wetlands.geojson
 """
 import json
 import pathlib
@@ -64,6 +68,26 @@ built = cover.eq(6).rename('built')
 lowland = ee.Image('MERIT/Hydro/v1_0_1').select('hnd').lt(LOWLAND_M).rename('lowland')
 
 
+# Transition classes: 3 lost permanent, 6 lost seasonal; 1, 2, 4, 5, 7, 8 still water (8 has
+# shrunk from permanent to seasonal). 9 and 10 are short-lived water inside the record, mostly
+# flooding and construction pits, so they are left out.
+transition = ee.Image('JRC/GSW1_4/GlobalSurfaceWater').select('transition')
+lost = transition.eq(3).Or(transition.eq(6))
+still = transition.remap([1, 2, 4, 5, 7, 8], [1, 1, 1, 1, 1, 1], 0)
+WETLAND_CLASS = {1: 'built', 2: 'dried', 3: 'water'}
+wetland = (
+    lost.And(built).multiply(1)
+    .add(lost.And(built.Not()).multiply(2))
+    .add(still.multiply(3))
+    .rename('wetland')
+)
+wetland_shares = (
+    lost.And(built).rename('wetland_built')
+    .addBands(lost.And(built.Not()).rename('wetland_dried'))
+    .addBands(still.rename('wetland_water'))
+)
+
+
 def per_ward(image, scale):
     rows = image.reduceRegions(wards, ee.Reducer.mean(), scale).select(['.*'], None, False).getInfo()
     # A one-band image comes back as "mean" instead of under its band name.
@@ -83,10 +107,31 @@ for name, image, scale in [
     ('greenery', greenery, 10),
     ('land cover', trees.addBands(built), 10),
     ('lowland', lowland, 30),
+    ('wetlands', wetland_shares.unmask(0), 30),
 ]:
     print(f'{name} …', flush=True)
     for ward_id, props in per_ward(image, scale).items():
         out[ward_id].update({k: v for k, v in props.items() if k != 'id'})
+
+print('wetland outlines …', flush=True)
+outlines = (
+    wetland.selfMask()
+    .reduceToVectors(
+        geometry=city, scale=30, geometryType='polygon', eightConnected=True, labelProperty='cls', maxPixels=1e9
+    )
+    .getInfo()
+)
+(ROOT / 'data/raw/ee-wetlands.geojson').write_text(
+    json.dumps(
+        {
+            'type': 'FeatureCollection',
+            'features': [
+                {'type': 'Feature', 'properties': {'kind': WETLAND_CLASS[f['properties']['cls']]}, 'geometry': f['geometry']}
+                for f in outlines['features']
+            ],
+        }
+    )
+)
 
 meta = {
     'landsat_scenes': landsat.size().getInfo(),
@@ -95,6 +140,7 @@ meta = {
     'dry_season': DRY,
     'land_cover': LAND_COVER,
     'lowland_m': LOWLAND_M,
+    'surface_water': 'JRC/GSW1_4 1984-2021',
 }
 (ROOT / 'data/raw/ee-wards.json').write_text(json.dumps({'meta': meta, 'wards': out}))
 print(meta)

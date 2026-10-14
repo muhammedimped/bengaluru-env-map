@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-12",
+  "generated": "2026-10-14",
   "wards": 243,
   "lst_dates": [
     "2026-03-06",
@@ -28,6 +28,7 @@
       "2025-10-01",
       "2026-10-01"
     ],
-    "lowland_m": 3
+    "lowland_m": 3,
+    "surface_water": "JRC/GSW1_4 1984-2021"
   }
 }

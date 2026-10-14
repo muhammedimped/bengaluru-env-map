@@ -57,6 +57,10 @@ h3 { font-size: 12px; color: var(--muted); margin: 12px 0 4px; }
 .station-name { font-size: 13px; margin-bottom: 6px; }
 .hint.stale { color: #a35a12; }
 .dot.flood { background: #1d5fd1; }
+.dot.wet-water, .dot.wet-dried, .dot.wet-built { border-radius: 2px; }
+.dot.wet-water { background: #1f6fd1; }
+.dot.wet-dried { background: #d9952b; }
+.dot.wet-built { background: #c0262d; }
 .toggle + .toggle { margin-top: 6px; }
 
 .ranklist ol { border: 1px solid var(--line); border-radius: 8px; background: #fff; overflow: hidden; }
@@ -99,6 +103,43 @@ footer b { color: var(--ink); font-weight: 600; }
 .mapmenu-list button { display: block; width: 100%; padding: 10px 14px; border: 0; background: none; text-align: left; }
 .mapmenu-list button:hover { background: #f1f5f1; }
 .mapmenu-list button.on { font-weight: 600; color: var(--accent); }
+
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 3px; background: #edf0ec; border-radius: 9px; }
+.modes button { border: 0; border-radius: 7px; padding: 7px 6px; background: none; font-size: 13px; color: var(--muted); }
+.modes button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+
+.finder .ward-name { margin-bottom: 6px; }
+.office { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.office b { flex: 1; }
+.office .pin { flex: none; }
+.pin.office { width: 18px; height: 18px; border-radius: 4px; background: #c0262d; }
+.opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.opt { padding: 5px 10px; border: 1px solid var(--line); border-radius: 999px; background: #fff; font-size: 13px; }
+.opt:hover { border-color: #b8c4bc; }
+.opt.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.options { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.option { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.option.open { border-color: #b8c4bc; }
+.option-head { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: 0; background: none; text-align: left; }
+.option-head:hover { background: #f1f5f1; }
+.option-num, .option-marker { flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; display: grid; place-items: center; }
+.option-marker { border: 2px solid #fff; box-shadow: 0 1px 6px rgb(0 0 0 / 0.35); padding: 0; }
+.option-name { flex: 1; display: flex; flex-direction: column; font-weight: 600; }
+.option-name small, .option-fit small { font-weight: 400; color: var(--muted); font-size: 11px; }
+.option-fit { font-weight: 700; font-size: 16px; text-align: right; display: flex; flex-direction: column; line-height: 1.1; }
+.option-body { padding: 0 12px 12px; border-top: 1px solid var(--line); }
+.option-body h4 { font-size: 12px; margin: 10px 0 4px; }
+h4.good { color: #2f7a4b; }
+h4.bad { color: #a8382c; }
+.verdicts li { font-size: 13px; padding: 4px 0; }
+.verdicts li + li { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 4px; }
+.verdicts p { color: var(--muted); font-size: 12px; margin-top: 4px; }
+.verdicts i { font-style: normal; font-weight: 600; color: var(--ink); }
+.muted { color: var(--muted); font-size: 12px; }
+.reach { display: block; width: fit-content; margin-top: 4px; padding: 1px 7px; border-radius: 999px; font-size: 11px; }
+.reach.home { background: #e5f2e9; color: #24603c; }
+.reach.area { background: #fbe9e6; color: #8f2f24; }
+.see { margin-top: 10px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; font-size: 12px; }
 
 .handle { display: none; }
 .search { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -144,6 +185,8 @@ footer b { color: var(--ink); font-weight: 600; }
   .toggle { padding: 4px 0; }
 
   .card { order: 0; flex: none; }
+  .modes { order: -1; flex: none; }
+  .opt { padding: 8px 12px; }
   .panel.has-ward section:not(.card) { order: 2; }
   .panel > header { order: 8; }
   .panel > footer { order: 9; margin-top: 0; }

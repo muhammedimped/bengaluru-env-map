@@ -10,6 +10,7 @@
 //             and OpenStreetMap storm drains / streams
 //   earth engine – optional data/raw/ee-wards.json from scripts/ee_wards.py: 30 m Landsat heat,
 //             10 m Sentinel-2 greenery and low-lying land. Replaces the MODIS day heat and NDVI.
+//             Also data/raw/ee-wetlands.geojson: JRC surface water lost since 1984 and still there.
 //   places  – OpenStreetMap localities and metro stations, for search
 import fs from 'node:fs/promises'
 import path from 'node:path'
@@ -379,6 +380,7 @@ for (const { props: p } of wards) {
   p.lowland_pct = e?.lowland != null ? +(100 * e.lowland).toFixed(1) : null
   if (e?.lst != null) p.lst_day = +e.lst.toFixed(1)
   if (e?.ndvi != null) p.ndvi = +e.ndvi.toFixed(3)
+  p.lost_wetland_pct = e?.wetland_built != null ? +(100 * (e.wetland_built + e.wetland_dried)).toFixed(2) : null
 }
 if (!ee) console.log('no data/raw/ee-wards.json: using MODIS heat and greenery, no lowland figure')
 
@@ -429,6 +431,11 @@ await fs.mkdir(OUT, { recursive: true })
 await fs.writeFile(path.join(OUT, 'wards.geojson'), JSON.stringify(geojson))
 await fs.writeFile(path.join(OUT, 'sites.json'), JSON.stringify([...sites, ...floodSpots]))
 await fs.writeFile(path.join(OUT, 'places.json'), JSON.stringify(places))
+const wetlands = await fs.readFile(path.join(RAW, 'ee-wetlands.geojson'), 'utf8').then(JSON.parse, () => null)
+if (wetlands) {
+  for (const f of wetlands.features) f.geometry.coordinates = round(f.geometry.coordinates)
+  await fs.writeFile(path.join(OUT, 'wetlands.geojson'), JSON.stringify(wetlands))
+}
 await fs.writeFile(path.join(OUT, 'meta.json'), JSON.stringify(meta, null, 2))
 
 const by = (k) => [...wards].filter((w) => w.props[k] != null).sort((a, b) => b.props[k] - a.props[k])
@@ -437,6 +444,7 @@ console.log(`wards ${wards.length} · waste/sewage sites ${sites.length} · road
 console.log(`places: ${places.filter((p) => p.kind === 'locality').length} localities · ${places.filter((p) => p.kind === 'metro').length} metro stations`)
 console.log(`flood spots ${floodSpots.length} · drain cells ${drainCells.size}`)
 console.log('most low-lying  :', show(by('lowland_pct').slice(0, 8), 'lowland_pct'))
+console.log('most lost wetland:', show(by('lost_wetland_pct').slice(0, 8), 'lost_wetland_pct'))
 console.log('most flood spots:', show(by('flood_spots').slice(0, 8), 'flood_spots'))
 console.log('hottest day :', show(by('lst_day').slice(0, 5), 'lst_day'))
 console.log('coolest day :', show(by('lst_day').slice(-5), 'lst_day'))

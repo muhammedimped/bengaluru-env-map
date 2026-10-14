@@ -15,6 +15,7 @@ export type Ward = {
   flood_spots: number
   drain_pct: number
   lowland_pct: number | null
+  lost_wetland_pct: number | null
   road_km_per_km2: number
   score: number
 }
@@ -109,6 +110,17 @@ export const METRICS: Metric[] = [
     superlative: ['least', 'most'],
   },
   {
+    key: 'lost_wetland_pct',
+    label: 'Lost wetland',
+    short: 'Lost wetland',
+    unit: '%',
+    higherIsBetter: false,
+    ramp: WATER_RISK,
+    about:
+      'Share of the ward that satellites saw as lake, tank or marsh at some point since 1984 and that is no longer water: built over, dried up, silted or covered in weeds. Water still follows its old course, so former lake beds and swamps flood easily. Most of Bengaluru’s lost lakes disappeared before 1984, so this misses older losses.',
+    superlative: ['least', 'most'],
+  },
+  {
     key: 'ndvi',
     label: 'Greenery',
     short: 'Greenery',
@@ -180,6 +192,16 @@ export function breaksFor(wards: Ward[], metric: Metric): number[] {
   const values = wards.map((w) => w[metric.key]).filter((v): v is number => v != null).sort((a, b) => a - b)
   const n = metric.ramp.length
   const breaks: number[] = []
+  // When most wards read zero, zero gets the first colour and the rest are split among the others.
+  const positive = values.filter((v) => v > 0)
+  if (values[0] === 0 && positive.length && values.length - positive.length >= values.length / 3) {
+    breaks.push(positive[0])
+    for (let i = 1; i < n - 1; i++) {
+      const b = positive[Math.floor((i * positive.length) / (n - 1))]
+      if (b > breaks.at(-1)!) breaks.push(b)
+    }
+    return breaks
+  }
   for (let i = 1; i < n; i++) {
     const b = values[Math.floor((i * values.length) / n)]
     if (b > (breaks.at(-1) ?? values[0])) breaks.push(b)
@@ -196,7 +218,7 @@ export function coloursFor(metric: Metric, breaks: number[]): string[] {
 
 export function format(value: number | null, metric: Metric): string {
   if (value == null) return '–'
-  if (metric.key === 'ndvi') return value.toFixed(2)
+  if (metric.key === 'ndvi' || metric.key === 'lost_wetland_pct') return value.toFixed(2)
   if (metric.key === 'score' || metric.key === 'flood_spots') return String(value)
   return value.toFixed(1)
 }
