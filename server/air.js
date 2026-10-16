@@ -181,9 +181,17 @@ const kmApart = (aLat, aLon, bLat, bLon) => {
   return 6371 * Math.hypot(x, y)
 }
 
+let worldPending = null
+
 /** Current PM2.5 in world cities, and the median across every reporting monitor on Earth. */
-async function world(env) {
-  if (worldCache.data && Date.now() - worldCache.at < WORLD_MS) return worldCache.data
+function world(env) {
+  if (worldCache.data && Date.now() - worldCache.at < WORLD_MS) return Promise.resolve(worldCache.data)
+  // One gathering at a time: overlapping ones would trip OpenAQ's rate limit for each other.
+  worldPending ??= gatherWorld(env).finally(() => (worldPending = null))
+  return worldPending
+}
+
+async function gatherWorld(env) {
   const cutoff = Date.now() - FRESH_MS
   const cities = []
   if (env.DATA_GOV_IN_KEY) {
@@ -312,7 +320,10 @@ async function collect(env) {
 }
 
 export async function getAir(env = process.env) {
-  if (cache.data && Date.now() - cache.at < CACHE_MS) return cache.data
+  // World figures that arrived after this response was cached are passed on straight away.
+  if (cache.data && Date.now() - cache.at < CACHE_MS) {
+    return cache.data.world || !worldCache.data ? cache.data : { ...cache.data, world: worldCache.data }
+  }
   const call = redis()
   // In production the hourly snapshot stores the world figures (they take a minute or two to
   // gather); without Redis, as in local dev, they are gathered here.

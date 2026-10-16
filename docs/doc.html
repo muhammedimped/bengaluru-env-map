@@ -33,6 +33,7 @@
   figcaption { font-size: 8.8pt; color: var(--muted); margin-top: 1.5mm; }
   .phones { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
   .phones img { border-radius: 4mm; }
+  .phones .card { align-self: start; }
 
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin: 4mm 0 5mm; }
   .stat { background: var(--wash); border-radius: 2mm; padding: 3.5mm; }
@@ -60,16 +61,16 @@
 <body>
 
 <div class="cover">
-  <div class="kicker">Project note · 12 October 2026</div>
+  <div class="kicker">Project note · updated 16 October 2026</div>
   <h1>Bengaluru<br>Environment Map</h1>
   <p class="lead">What a rental listing won’t tell you: how hot an area gets, how green it is, whether it floods, what is in the air, and what sits next door. Ward by ward, for the whole city, free to use.</p>
-  <img src="heat.jpg" alt="The map showing daytime heat across Bengaluru's 243 wards">
+  <img src="heat.jpg" alt="The map showing daytime heat across Bengaluru's 369 wards">
   <div class="foot">
     <div>
       <div class="muted small">Live at</div>
       <div class="url"><a href="https://bengaluru-env-map.vercel.app">bengaluru-env-map.vercel.app</a></div>
     </div>
-    <div class="muted small" style="text-align:right">From idea to public website in one working day.<br>Built in conversation with Claude Code.</div>
+    <div class="muted small" style="text-align:right">First public version in one working day, 12 October 2026.<br>Extended on 14 and 16 October. Built in conversation with Claude Code.</div>
   </div>
 </div>
 
@@ -95,160 +96,191 @@
       <li>Real data from real sources, kept up to date</li>
     </ul>
   </div>
-  <p>Most of this now exists in a working form. A few items turned out to have no trustworthy public data yet; those are listed plainly in section 6.</p>
+  <p>Most of this now exists in a working form. A few items turned out to have no trustworthy public data yet; those are listed plainly in section 8.</p>
 
   <div class="stats">
-    <div class="stat"><b>243</b><span>wards covered, the whole BBMP area</span></div>
-    <div class="stat"><b>12</b><span>map layers to switch between</span></div>
-    <div class="stat"><b>1,120</b><span>localities and metro stations searchable</span></div>
-    <div class="stat"><b>9</b><span>open data sources combined</span></div>
+    <div class="stat"><b>369</b><span>wards: the whole Greater Bengaluru Authority area, 2025 boundaries</span></div>
+    <div class="stat"><b>17</b><span>map layers to switch between</span></div>
+    <div class="stat"><b>1,128</b><span>localities and metro stations searchable</span></div>
+    <div class="stat"><b>15</b><span>open data sources combined</span></div>
   </div>
 </section>
 
 <section>
   <div class="kicker">2 · What exists today</div>
   <h2>A live website that works on a phone</h2>
-  <p>Open the link, search for a locality or metro station, or tap “my area”. The map opens the ward you asked about and shows every figure next to its rank among all 243 wards, so “38.9°C” comes with “59th coolest of 243”.</p>
+  <p>Open the link, search for a locality or metro station, or tap “my area”. The map opens the ward you asked about and shows every figure next to its rank among all 369 wards, so “20.1°C at night” comes with “1st best of 369”.</p>
   <figure class="phones">
     <img src="phone-map.jpg" alt="Phone view of the map">
-    <img src="phone-search.jpg" alt="Searching for Indiranagar on a phone">
     <img src="phone-ward.jpg" alt="A ward profile on a phone">
+    <img src="phone-air-ward.jpg" alt="The air quality tab of a ward on a phone">
   </figure>
-  <figcaption>On a phone: the full-screen map, search by locality or metro station, and a ward profile that slides up from the bottom.</figcaption>
+  <figcaption>On a phone: the full-screen map; a ward profile with every figure ranked; and the ward’s air quality tab, from the nearest government monitor.</figcaption>
 
   <h3>What you can do with it</h3>
   <div class="cols">
     <ul>
-      <li><b>Compare areas</b> on twelve layers: environment score, daytime heat, night heat, low-lying land, flood spots, storm drains, greenery, parks, lakes, industrial land, major roads and distance to a dump</li>
-      <li><b>Search</b> 1,046 localities and 74 metro stations by the names people actually use, such as “Indiranagar 2nd Stage”</li>
-      <li><b>Find your own area</b> with one tap using the phone’s location</li>
+      <li><b>Compare areas</b> on seventeen layers: environment score, daytime and night heat, low-lying land, flood spots, storm drains, lost wetland, tree cover, greenery, parks, lakes, industry, major roads, power lines, distance to a dump, crowding and light at night</li>
+      <li><b>Search</b> 1,054 localities and 74 metro stations by the names people actually use</li>
+      <li><b>Find a home near work</b>: enter an office and get wards within reach ranked by environment, each with what is good, what is not and how to live with it</li>
     </ul>
     <ul>
-      <li><b>See the sources of trouble</b>: landfills, dumps, sewage plants and BBMP’s listed flood spots as dots on the map</li>
-      <li><b>Check air readings</b> from government monitors and community sensors, each labelled with when it was measured</li>
-      <li><b>Change the view</b>: light, streets, dark or satellite, and a 3D mode where each ward rises as a block</li>
+      <li><b>Check the air</b> for the ward, the whole city and other cities around the world (section 3)</li>
+      <li><b>See the sources of trouble</b>: landfills, dumps, sewage plants, BBMP’s listed flood spots, high-tension lines and lakes lost since 1984</li>
+      <li><b>Change the view</b>: light, streets, dark, satellite and night lights, and a 3D mode where each ward rises as a block</li>
     </ul>
   </div>
+</section>
+
+<section>
+  <div class="kicker">3 · Air quality, three ways</div>
+  <h2>This ward, Bengaluru, and the world</h2>
+  <p>The ward profile keeps air to one line: an index for <b>this ward</b> and one for <b>Bengaluru</b>. Tapping either opens the Air quality tab with the detail, so the profile itself stays uncluttered.</p>
+  <figure class="phones">
+    <img src="phone-air-city.jpg" alt="Bengaluru air quality on a phone">
+    <img src="phone-air-world.jpg" alt="World comparison on a phone">
+    <div class="card">
+      <h3>How to read it</h3>
+      <p><b>This ward</b> uses the nearest government monitor that measures dust and fine particles, with its distance shown. Most wards have no monitor of their own.</p>
+      <p><b>Bengaluru</b> is the middle value across the reporting stations, so one busy junction cannot set the city figure.</p>
+      <p><b>World</b> compares Bengaluru with Indian and foreign cities and the world median, all on PM2.5, from official monitors only.</p>
+      <p class="small muted">Every reading says when it was measured. An hourly trend builds up from 16 October.</p>
+    </div>
+  </figure>
+  <h3>One index, explained</h3>
+  <p>The main number is India’s official Air Quality Index, as CPCB and the news use it. Under it, one small line gives the <b>US AQI</b>, because apps such as aqi.in and IQAir use that stricter scale and show worse numbers for the same air. At Bengaluru’s 14.4 µg/m³ of PM2.5 on 16 October, India’s index says 24 (Good) and the US index says 60 (Moderate). Showing both side by side explains the gap without asking people to choose.</p>
+  <h3>Why the readings are now live</h3>
+  <p>On launch the government stations reached through OpenAQ were days behind, and on 13 October that feed stopped altogether. The map now reads CPCB’s own hourly feed on data.gov.in. That feed turned out to report each pollutant as an index score rather than an amount, so the site converts it back before working out the index. It also refuses requests from outside India, so the site’s server runs in Mumbai.</p>
 </section>
 
 <section>
   <figure>
     <img src="3d.jpg" alt="3D view of daytime heat">
-    <figcaption>3D view of daytime heat. Each ward is a block; the hottest stand tallest. It is a graphic of the data, not a model of the terrain.</figcaption>
+    <figcaption>3D view of daytime heat across the 369 wards. Each ward is a block; the hottest stand tallest. It is a graphic of the data, not a model of the terrain.</figcaption>
   </figure>
   <figure>
     <img src="lowland.jpg" alt="Low-lying land layer">
-    <figcaption>Low-lying land: the share of each ward sitting less than 3 m above the drainage line it would flood from. The eastern and south-eastern belt stands out.</figcaption>
+    <figcaption>Low-lying land: the share of each ward sitting less than 3 m above the drainage line it would flood from. The belt around the eastern and southern lakes stands out.</figcaption>
   </figure>
 </section>
 
 <section>
-  <div class="kicker">3 · What the map already shows</div>
+  <div class="kicker">4 · What the map already shows</div>
   <h2>The differences between neighbourhoods are large</h2>
-  <p>These come straight from the data on the live site.</p>
   <div class="stats">
-    <div class="stat"><b>7°C</b><span>gap in summer surface heat between the coolest and hottest ward (36.0°C to 43.2°C)</span></div>
-    <div class="stat"><b>49%</b><span>of Bellanduru ward is low-lying land, second highest in the city</span></div>
-    <div class="stat"><b>62%</b><span>of Peenya ward is industrial land</span></div>
-    <div class="stat"><b>375</b><span>flood-prone locations listed by BBMP, mapped as individual dots</span></div>
+    <div class="stat"><b>7.1°C</b><span>gap in summer surface heat between the coolest and hottest ward (36.2°C to 43.3°C)</span></div>
+    <div class="stat"><b>59%</b><span>of Yamalur ward is low-lying land, yet BBMP lists no flood spot there</span></div>
+    <div class="stat"><b>60%</b><span>tree cover in Sadashiva Nagara; Padarayanapura has almost none</span></div>
+    <div class="stat"><b>9</b><span>live government air monitors for 369 wards</span></div>
   </div>
   <ul>
-    <li><b>Heat follows concrete.</b> The hottest wards on a summer morning are dense, built-up ones such as Devara Jeevanahalli, Kaveripura and Hegganahalli. The coolest sit beside lakes and tree cover, such as Bilekhalli and Old Thippasandra.</li>
-    <li><b>Greenery is very uneven.</b> Agaram, New Bayappanahalli and Aramane Nagara are several times greener by satellite measure than Chickpete or Kempapura Agrahara.</li>
-    <li><b>Flood exposure is not where the official list says.</b> BBMP’s published lists have no flood spot in Bellanduru ward, an area known for flooding. Ground elevation tells a different story, which is why the map shows both.</li>
-    <li><b>One area can be good and bad at once.</b> Bellanduru is among the coolest wards at night and fairly green, yet half of it is low-lying. A single “good area / bad area” label hides exactly what a home-seeker needs to know.</li>
+    <li><b>Heat follows concrete.</b> The hottest wards on a summer morning are dense, built-up ones such as Vibhootipura, Kaveripura and Srigandada Kaval. The coolest sit beside lakes and tree cover, such as Bilekahalli and Sadashiva Nagara. Industry is concentrated too: three-quarters of Shivapura ward is industrial land.</li>
+    <li><b>Trees and crowding go opposite ways.</b> Padarayanapura is the most crowded ward, about 109,000 people per km², and has almost no tree cover. Sadashiva Nagara and Kuvempunagara are around 60% trees.</li>
+    <li><b>Flood exposure is not where the official list says.</b> Yamalur, beside Bellandur lake, has no BBMP flood spot, but 59% of it is low-lying and 15% of it was lake or marsh in 1984, the most of any ward.</li>
+    <li><b>One area can be good and bad at once.</b> The same Yamalur is the coolest ward in the city at night and 12th best overall. A single “good area / bad area” label hides exactly what a home-seeker needs to know.</li>
   </ul>
   <figure>
-    <img src="satellite.jpg" alt="Satellite view of Bellanduru ward with its profile">
-    <figcaption>Bellanduru ward on the satellite view, with its profile open: cool at night, but 49.2% low-lying land.</figcaption>
+    <img src="satellite.jpg" alt="Satellite view of Yamalur ward with its profile">
+    <figcaption>Yamalur ward on the satellite view, with its profile open: coolest at night of all 369 wards, but 59.4% low-lying and the most lost wetland in the city.</figcaption>
   </figure>
 </section>
 
 <section>
-  <div class="kicker">4 · How the idea became real</div>
-  <h2>Ten steps, one day</h2>
-  <p>The whole build happened on 12 October 2026 as a running conversation: the founder described what was wanted and reacted to each version; Claude Code found the data, wrote the software, tested it and put it online. Several steps were corrections after something did not hold up.</p>
+  <div class="kicker">5 · How the idea became real</div>
+  <h2>Three working days</h2>
+  <p>The build ran as a conversation: the founder described what was wanted and reacted to each version; Claude Code found the data, wrote the software, tested it and put it online. Corrections are marked in red.</p>
+  <h3>12 October: from an idea to a public website</h3>
   <ol class="steps">
-    <li><b>From a spoken idea to a first map.</b>Checked which open data sources actually respond, then built a working map of all 243 wards with satellite heat, greenery, parks, lakes, industry, roads and waste sites.</li>
-    <li><b>Search by the names people use.</b>Added 1,046 localities and 74 metro stations, each tied to the ward it sits in.</li>
-    <li><b>Flood data.</b>A commercial flood map was suggested as a source. <span class="fix">Its data is private, so it was not copied.</span> The public BBMP flood-location lists it relies on were found and used instead.</li>
-    <li><b>Live air quality.</b>A popular air-quality site was suggested. <span class="fix">It blocks automated access, so it was not scraped.</span> Government monitoring stations were connected through OpenAQ, an open service.</li>
-    <li><b>Honest labelling of stale readings.</b><span class="fix">Most government stations turned out to be five days behind.</span> Every reading now shows when it was measured, and silent stations are greyed out.</li>
-    <li><b>A proper phone version.</b>Full-screen map, floating search, a slide-up details sheet and a “my area” button.</li>
-    <li><b>Going public.</b>Deployed to Vercel under the founder’s account, with the data key kept out of public view.</li>
-    <li><b>Sharper satellite data through Google Earth Engine.</b>Heat improved from 1 km to 30 m detail and greenery from 250 m to 10 m. A new low-lying land layer <span class="fix">closed the Bellandur flood gap.</span></li>
-    <li><b>Fixes from real phone use.</b><span class="fix">Dots could not be tapped on a phone.</span> Taps now allow for fingertip size.</li>
-    <li><b>Map views and 3D.</b>Light, streets, dark and satellite views, plus 3D blocks. <span class="fix">Tapping a 3D block picked the wrong ward;</span> picking now follows the line of sight.</li>
+    <li><b>A first map.</b>Every ward mapped with satellite heat, greenery, parks, lakes, industry, roads and waste sites, plus search by 1,000+ localities and metro stations.</li>
+    <li><b>Flood and air data, honestly sourced.</b>A commercial flood map and a popular air-quality site were suggested. <span class="fix">One is private data and the other blocks automated access, so neither was copied.</span> BBMP’s public flood lists and government monitors were used instead, each reading labelled with its age.</li>
+    <li><b>Phone version, sharper satellite data, 3D.</b>Heat improved from 1 km to 30 m and greenery from 250 m to 10 m through Google Earth Engine, plus a low-lying land layer. <span class="fix">Fixed taps on phone dots and 3D picking the wrong ward.</span></li>
+  </ol>
+  <h3>14 October: deeper layers and a home finder</h3>
+  <ol class="steps" style="counter-reset: s 3">
+    <li><b>Lost wetlands.</b>Lakes and marshes that held water in 1984 and have since been built over or dried out, as a map overlay and a ward figure.</li>
+    <li><b>Trees, crowding, night lights, power lines.</b>Each source tested against what is known on the ground; two tree-cover datasets that read near zero in leafy Malleswaram were rejected.</li>
+    <li><b>Find a home near work.</b>Enter an office; get nearby wards ranked by environment, with the trade-offs spelled out.</li>
+  </ol>
+  <h3>16 October: correct boundaries and live air</h3>
+  <ol class="steps" style="counter-reset: s 6">
+    <li><b>The right ward map.</b><span class="fix">A blank pocket inside Kogilu ward exposed that the map used the old 243-ward BBMP boundaries.</span> It now uses the Greater Bengaluru Authority’s 2025 delimitation, 369 wards in five corporations, with every figure recomputed.</li>
+    <li><b>Live air: ward, city and world.</b>CPCB’s hourly feed replaced the stalled one, shown on India’s scale with the US figure alongside, behind a compact air line that opens a detail tab. <span class="fix">A first world pull included cheap sensors reading 982 in Mumbai and 0 in Sydney;</span> only official monitors are used now.</li>
   </ol>
 </section>
 
 <section>
-  <div class="kicker">5 · Where the data comes from</div>
-  <h2>Nine open sources, each credited on the site</h2>
+  <div class="kicker">6 · Where the data comes from</div>
+  <h2>Fifteen open sources, each credited on the site</h2>
   <table>
-    <tr><th style="width:27%">What it shows</th><th style="width:38%">Source</th><th>Detail and freshness</th></tr>
-    <tr><td>Daytime heat</td><td>Landsat 8 and 9 satellites, via Google Earth Engine</td><td>30 m. Nine cloud-free passes, March to mid-May 2026, about 10:30 am</td></tr>
-    <tr><td>Night heat</td><td>NASA MODIS Aqua satellite</td><td>1 km. Summer 2026, about 1:30 am</td></tr>
-    <tr><td>Greenery</td><td>Sentinel-2 satellites, via Google Earth Engine</td><td>10 m. 33 low-cloud images, January to April 2026</td></tr>
-    <tr><td>Low-lying land</td><td>MERIT Hydro elevation data, via Google Earth Engine</td><td>90 m. Height above the nearest drainage line</td></tr>
-    <tr><td>Flood spots</td><td>BBMP lists of flood-vulnerable, flood-prone and low-lying locations, published on OpenCity</td><td>375 locations. Public domain, undated</td></tr>
-    <tr><td>Parks, lakes, industry, roads, storm drains, waste sites, localities, metro stations</td><td>OpenStreetMap</td><td>Mapped by volunteers; as complete as their coverage</td></tr>
-    <tr><td>Air monitoring stations</td><td>Government (CPCB / KSPCB) monitors and community sensors, via OpenAQ</td><td>13 stations, checked every 30 minutes</td></tr>
-    <tr><td>Modelled air, CO₂, methane, weather</td><td>Open-Meteo</td><td>Hourly, but a regional model: nearby wards read alike</td></tr>
-    <tr><td>Ward boundaries</td><td>BBMP 243-ward delimitation, via KGIS and DataMeet</td><td>Official boundaries</td></tr>
+    <tr><th style="width:24%">What it shows</th><th style="width:40%">Source</th><th>Detail and freshness</th></tr>
+    <tr><td>Ward boundaries</td><td>Greater Bengaluru Authority 2025 delimitation, December 2025 map on OpenCity</td><td>369 wards in five corporations</td></tr>
+    <tr><td>Daytime heat</td><td>Landsat 8 and 9, via Google Earth Engine</td><td>30 m. Nine cloud-free passes, March to mid-May 2026</td></tr>
+    <tr><td>Night heat</td><td>NASA MODIS Aqua</td><td>1 km. Summer 2026, about 1:30 am</td></tr>
+    <tr><td>Greenery</td><td>Sentinel-2, via Google Earth Engine</td><td>10 m. 33 low-cloud images, January to April 2026</td></tr>
+    <tr><td>Tree cover</td><td>ESA WorldCover</td><td>10 m, 2021</td></tr>
+    <tr><td>Low-lying land</td><td>MERIT Hydro</td><td>90 m. Height above the nearest drainage line</td></tr>
+    <tr><td>Lost wetland</td><td>JRC Global Surface Water with Google Dynamic World</td><td>Water from 1984 to 2021, today’s land cover</td></tr>
+    <tr><td>Crowding</td><td>GHSL population grid (EU JRC)</td><td>100 m, 2025. Modelled, not a census</td></tr>
+    <tr><td>Light at night</td><td>NOAA VIIRS</td><td>2025 annual average</td></tr>
+    <tr><td>Flood spots</td><td>BBMP flood lists, published on OpenCity</td><td>375 locations. Public domain, undated</td></tr>
+    <tr><td>Parks, lakes, industry, roads, drains, power lines, waste sites, places</td><td>OpenStreetMap</td><td>As complete as volunteer mapping</td></tr>
+    <tr><td>Bengaluru air</td><td>CPCB / KSPCB monitors via data.gov.in; community sensors via OpenAQ</td><td>Hourly; 9 government stations reporting on 16 October</td></tr>
+    <tr><td>World air</td><td>CPCB for Indian cities; reference-grade monitors on OpenAQ elsewhere</td><td>Hourly; about 3,170 monitors worldwide</td></tr>
+    <tr><td>Weather</td><td>Open-Meteo</td><td>Air temperature and humidity at the ward</td></tr>
   </table>
   <h3>The environment score</h3>
-  <p>Each ward gets a score out of 100 by ranking it against the other wards: heat 30%, greenery 25%, flood exposure 15%, parks and lakes 10%, major roads 10%, industry 10%. The weights are a first judgement, not a standard, and the site says so. The individual layers matter more than the single number.</p>
+  <p>Each ward is ranked against the others: heat 30%, greenery 25%, flood exposure 15%, parks and lakes 10%, major roads 10%, industry 10%. The weights are a first judgement, not a standard, and the site says so.</p>
   <h3>How it is put together</h3>
-  <p>A data script gathers the sources and works out every figure for every ward. The website then loads those figures and draws the map in the browser. Air station readings are fetched live through a small server function so the access key stays private. The site runs on Vercel; the satellite processing runs on Google Earth Engine under a non-commercial registration.</p>
+  <p>A data script works out every figure for every ward; the website draws the map in the browser. Air readings come through a server function in Mumbai so the access keys stay private, and an hourly job records them for the trend and the world comparison. Hosting is on Vercel; satellite processing on Google Earth Engine, non-commercial.</p>
 </section>
 
 <section>
-  <div class="kicker">6 · The impact it can create</div>
+  <div class="kicker">7 · The impact it can create</div>
   <h2>Making the invisible part of a neighbourhood visible</h2>
-  <p>The map has only just gone public, so what follows is what it makes possible, not results already achieved.</p>
+  <p>The map is newly public, so what follows is what it makes possible, not results already achieved.</p>
   <div class="cols">
-    <div class="card"><h3>People renting or buying a home</h3><p>A family can check, before signing, whether an area is one of the hottest in the city, sits on low ground, or is next to a dump. Today that takes local knowledge or luck. Flood exposure in particular can mean years of damage and cost.</p></div>
+    <div class="card"><h3>People renting or buying a home</h3><p>A family can check, before signing, whether an area is one of the hottest in the city, sits on low ground, or is next to a dump, and find wards near work that do well on what matters to them.</p></div>
     <div class="card"><h3>Residents and welfare associations</h3><p>A ward that is hotter, less green or more flood-exposed than its neighbours now has numbers and a map to show when it asks for trees, drain repairs or a park.</p></div>
-    <div class="card"><h3>Health and daily life</h3><p>Heat and bad air fall hardest on children, older people and outdoor workers. Seeing which wards stay hot at night, and where the nearest air monitor is, helps people and local clinics understand their own risk.</p></div>
-    <div class="card"><h3>Journalists, students and researchers</h3><p>The city’s environmental inequality becomes something anyone can open and quote, ward by ward, with the sources listed.</p></div>
-    <div class="card"><h3>The city itself</h3><p>The gap between BBMP’s flood list and the low-lying land layer is the kind of finding a public map surfaces. It also shows where monitoring is thin: 13 air stations for 243 wards.</p></div>
+    <div class="card"><h3>Health and daily life</h3><p>Heat and bad air fall hardest on children, older people and outdoor workers. Seeing which wards stay hot at night, and what the nearest monitor reads now, helps people understand their own risk.</p></div>
+    <div class="card"><h3>Journalists, students and researchers</h3><p>The city’s environmental inequality becomes something anyone can open and quote, ward by ward, on the current boundaries, with the sources listed.</p></div>
+    <div class="card"><h3>The city itself</h3><p>The gap between BBMP’s flood list and the low-lying land layer is the kind of finding a public map surfaces. So is how thin monitoring is: 9 live air stations for 369 wards.</p></div>
     <div class="card"><h3>The property market</h3><p>If buyers start asking about heat and flood exposure, builders and landlords have a reason to care about trees, drainage and open space. That is a slow effect, and the one with the widest reach.</p></div>
   </div>
   <h3>What would turn potential into real impact</h3>
   <ul>
     <li>People finding it: sharing in resident groups, housing forums and local media</li>
     <li>Trust: keeping every figure sourced and every weakness stated, as the site does now</li>
-    <li>Staying current: scheduled data refreshes instead of a one-day snapshot</li>
+    <li>Staying current: the air now updates hourly; the satellite layers still need scheduled refreshes</li>
     <li>Finer detail: locality and street level, where housing decisions are actually made</li>
   </ul>
 </section>
 
 <section>
-  <div class="kicker">7 · Honest limits and what comes next</div>
+  <div class="kicker">8 · Honest limits and what comes next</div>
   <h2>What it does not do yet</h2>
   <div class="cols">
     <div>
       <h3>Limits today</h3>
       <ul>
         <li><b>Ward level only.</b> Conditions change street by street, especially flooding. A ward figure is an average.</li>
-        <li><b>Air is mostly not live.</b> Government stations reached through OpenAQ were five days behind on launch day. Only one community sensor was current.</li>
-        <li><b>CO₂ and methane are model estimates</b> for the wider region. No public source measures them by neighbourhood.</li>
+        <li><b>Few air monitors.</b> Nine government stations cover 369 wards, so a ward’s “nearest station” can be 10 km away.</li>
+        <li><b>World air is PM2.5 only</b>, and cities with no recent official reading (on 16 October: Dubai, Beijing, Jakarta, Lagos, Paris, Sydney) are left out.</li>
+        <li><b>Ward names to confirm.</b> Two published versions of the 2025 ward map differ on 13 names and two ward shapes; the December 2025 one is used and has not yet been checked against the official notification.</li>
+        <li><b>CO₂ and methane are not shown.</b> No public source measures them by neighbourhood.</li>
         <li><b>Flood layers show exposure, not history.</b> There is no dated record of past floods or fires yet.</li>
         <li><b>No measured noise or traffic.</b> Major-road density stands in for both.</li>
-        <li><b>No tree count.</b> A satellite tree-cover figure was tried and rejected as unreliable; greenery is the measure used.</li>
-        <li><b>A snapshot.</b> Satellite and map figures were built on 12 October 2026 and do not refresh automatically.</li>
-        <li><b>Non-commercial data terms.</b> Earth Engine and the satellite imagery are free for non-commercial use only.</li>
+        <li><b>Satellite figures are a snapshot</b> of summer 2026 and do not refresh automatically.</li>
+        <li><b>Non-commercial data terms.</b> Earth Engine and some datasets are free for non-commercial use only.</li>
       </ul>
     </div>
     <div>
       <h3>Next steps, in order</h3>
       <ol>
-        <li><b>Fresher air data</b> from the government’s own hourly feed (data.gov.in)</li>
+        <li><b>Confirm ward names</b> against the official GBA notification</li>
         <li><b>Heat and greenery as zoomable imagery</b>, street by street, instead of one colour per ward</li>
         <li><b>Fire history</b> from NASA’s fire detection service, and dated flood records</li>
         <li><b>Real traffic</b> in place of the road-density stand-in</li>
-        <li><b>Weekly automatic refresh</b> of all figures</li>
+        <li><b>Scheduled refresh</b> of the satellite layers</li>
         <li><b>Satellite NO₂ and methane</b> for a daily, city-wide view of the air</li>
         <li><b>Kannada language support</b> and shareable links to a ward</li>
       </ol>
@@ -260,7 +292,7 @@
       </ul>
     </div>
   </div>
-  <p class="muted small" style="margin-top:6mm">Figures in this note are taken from the live site as built on 12 October 2026. Data credits: NASA / USGS Landsat and MODIS, Copernicus Sentinel-2, MERIT Hydro, BBMP via OpenCity, OpenStreetMap contributors, OpenAQ, Open-Meteo, KGIS and DataMeet. Satellite base map: Sentinel-2 cloudless by EOX.</p>
+  <p class="muted small" style="margin-top:6mm">Figures in this note are taken from the live site on 16 October 2026; air readings change every hour. Data credits: Greater Bengaluru Authority and BBMP via OpenCity, NASA / USGS Landsat and MODIS, Copernicus Sentinel-2, ESA WorldCover, MERIT Hydro, EC JRC Global Surface Water and GHSL, Google Dynamic World, NOAA VIIRS, OpenStreetMap contributors, CPCB / KSPCB via data.gov.in, OpenAQ, Open-Meteo. Satellite base map: Sentinel-2 cloudless by EOX.</p>
 </section>
 
 </body>
