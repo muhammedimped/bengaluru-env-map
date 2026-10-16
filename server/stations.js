@@ -2,7 +2,7 @@
 // Runs server-side only: the API key must never reach the browser.
 const API = 'https://api.openaq.org/v3'
 const BBOX = '77.44,12.82,77.80,13.16' // west, south, east, north
-const KEEP = ['pm25', 'pm10', 'no2', 'o3', 'so2']
+const KEEP = ['pm25', 'pm10', 'no2', 'o3', 'so2', 'co']
 const ACTIVE_DAYS = 30
 const CACHE_MS = 30 * 60 * 1000
 

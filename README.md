@@ -1,6 +1,6 @@
 # Bengaluru Environment Map
 
-Ward-by-ward heat, greenery, lakes, industry, major roads and waste sites for Bengaluru (BBMP, 243 wards),
+Ward-by-ward heat, greenery, lakes, industry, major roads and waste sites for Bengaluru (Greater Bengaluru Authority, 369 wards, 2025 delimitation),
 with live air readings for the selected ward.
 
     npm install

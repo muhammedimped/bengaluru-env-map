@@ -1,6 +1,9 @@
 export type Ward = {
   id: string
   name: string
+  corporation: string
+  ward_no: number
+  assembly: string
   area_km2: number
   lon: number
   lat: number
@@ -24,7 +27,7 @@ export type Ward = {
   score: number
 }
 
-export type MetricKey = Exclude<keyof Ward, 'id' | 'name' | 'area_km2' | 'lon' | 'lat' | 'parks'>
+export type MetricKey = Exclude<keyof Ward, 'id' | 'name' | 'corporation' | 'ward_no' | 'assembly' | 'area_km2' | 'lon' | 'lat' | 'parks'>
 
 export type Metric = {
   key: MetricKey

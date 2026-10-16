@@ -2,25 +2,17 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as maplibregl from 'maplibre-gl'
 import type { ExpressionSpecification, GeoJSONSource, MapGeoJSONFeature, Map as MlMap, StyleSpecification } from 'maplibre-gl'
 import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?url'
-import type { FeatureCollection, Point, Polygon } from 'geojson'
+import type { FeatureCollection, MultiPolygon, Point, Polygon } from 'geojson'
+import { AirPanel, AirStrip, ago, isFresh, type AirData, type AirScope, type Weather } from './Air'
 import Finder from './Finder'
 import { kmBetween, suggest, type Concern, type Intent, type Office } from './advice'
+import { POLLUTANT_LABEL, type Pollutant } from './aqi'
 import { METRICS, breaksFor, coloursFor, format, metricByKey, rankOf, type Metric, type MetricKey, type Ward } from './metrics'
 
 type Site = { kind: 'waste' | 'sewage' | 'flood'; label: string; name: string | null; lon: number; lat: number }
 type Place = { kind: 'locality' | 'metro'; name: string; lon: number; lat: number; ward: string }
 type Hit = { key: string; name: string; tag: string; ward: string; place?: Place }
 type Reading = { value: number; unit: string; at: string }
-type Station = {
-  id: number
-  name: string
-  provider: string | null
-  official: boolean
-  lat: number
-  lon: number
-  updated: string
-  readings: Partial<Record<'pm25' | 'pm10' | 'no2' | 'o3' | 'so2', Reading>>
-}
 type Meta = {
   generated: string
   wards: number
@@ -35,17 +27,7 @@ type Meta = {
     land_cover: [string, string]
   } | null
 }
-type WardCollection = FeatureCollection<Polygon, Ward>
-type Air = {
-  temp: number
-  humidity: number
-  pm2_5: number
-  pm10: number
-  no2: number
-  co2: number
-  methane: number
-}
-
+type WardCollection = FeatureCollection<Polygon | MultiPolygon, Ward>
 // The library looks for its worker next to its own bundle, which a bundler moves.
 maplibregl.setWorkerUrl(workerUrl)
 
@@ -83,23 +65,6 @@ const DOT_LAYERS = ['stations', 'sites', 'flood-sites']
 const MAX_COLUMN_M = 3200
 const BOUNDS: [number, number, number, number] = [77.44, 12.82, 77.8, 13.16]
 
-const POLLUTANTS = [
-  ['pm25', 'PM2.5'],
-  ['pm10', 'PM10'],
-  ['no2', 'NO₂'],
-  ['o3', 'Ozone'],
-  ['so2', 'SO₂'],
-] as const
-
-/** "3 hours ago", "5 days ago" */
-function ago(iso: string): string {
-  const hours = (Date.now() - Date.parse(iso)) / 3600000
-  if (hours < 1) return 'under an hour ago'
-  if (hours < 36) return `${Math.round(hours)} ${Math.round(hours) === 1 ? 'hour' : 'hours'} ago`
-  return `${Math.round(hours / 24)} days ago`
-}
-const isFresh = (iso: string) => Date.now() - Date.parse(iso) < 6 * 3600000
-
 const isMobile = () => window.matchMedia('(max-width: 760px)').matches
 type Sheet = 'peek' | 'half' | 'full'
 const SHEETS: Sheet[] = ['peek', 'half', 'full']
@@ -122,6 +87,11 @@ function inRing(x: number, y: number, ring: number[][]) {
   return inside
 }
 
+/** A ward's polygons, each an outer ring followed by its holes. A few GBA wards come in several pieces. */
+const polygonsOf = (g: Polygon | MultiPolygon) => (g.type === 'Polygon' ? [g.coordinates] : g.coordinates)
+const inPolygons = (x: number, y: number, polys: number[][][][]) =>
+  polys.some((poly) => inRing(x, y, poly[0]) && !poly.slice(1).some((hole) => inRing(x, y, hole)))
+
 const ordinal = (n: number) => {
   const s = ['th', 'st', 'nd', 'rd']
   const v = n % 100
@@ -135,26 +105,14 @@ function fillColour(metric: Metric, breaks: number[], colours: string[]): Expres
   return ['case', ['==', ['get', metric.key], null], '#d9d9d9', step] as unknown as ExpressionSpecification
 }
 
-async function fetchAir(lat: number, lon: number, signal: AbortSignal): Promise<Air> {
-  const at = `latitude=${lat}&longitude=${lon}`
-  const [air, weather] = await Promise.all([
-    fetch(
-      `https://air-quality-api.open-meteo.com/v1/air-quality?${at}&current=pm2_5,pm10,nitrogen_dioxide,carbon_dioxide,methane`,
-      { signal },
-    ).then((r) => r.json()),
-    fetch(`https://api.open-meteo.com/v1/forecast?${at}&current=temperature_2m,relative_humidity_2m`, { signal }).then(
-      (r) => r.json(),
-    ),
-  ])
-  return {
-    temp: weather.current.temperature_2m,
-    humidity: weather.current.relative_humidity_2m,
-    pm2_5: air.current.pm2_5,
-    pm10: air.current.pm10,
-    no2: air.current.nitrogen_dioxide,
-    co2: air.current.carbon_dioxide,
-    methane: air.current.methane,
-  }
+/** Air temperature and humidity at the ward, from Open-Meteo's weather model. */
+async function fetchWeather(lat: number, lon: number, signal: AbortSignal): Promise<Weather> {
+  const res = await fetch(
+    `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m`,
+    { signal },
+  )
+  const { current } = await res.json()
+  return { temp: current.temperature_2m, humidity: current.relative_humidity_2m }
 }
 
 export default function App() {
@@ -182,7 +140,8 @@ export default function App() {
   const [sheet, setSheet] = useState<Sheet>('peek')
   const [locating, setLocating] = useState<'idle' | 'busy' | string>('idle')
   const dragFrom = useRef<number | null>(null)
-  const [stations, setStations] = useState<Station[]>([])
+  const [air, setAir] = useState<AirData | null>(null)
+  const stations = useMemo(() => air?.stations ?? [], [air])
   const [showStations, setShowStations] = useState(true)
   const [query, setQuery] = useState('')
   const [places, setPlaces] = useState<Place[]>([])
@@ -216,10 +175,11 @@ export default function App() {
   const wardIndex = useMemo(
     () =>
       (data?.features ?? []).map((f) => {
-        const ring = f.geometry.coordinates[0]
-        const xs = ring.map((c) => c[0])
-        const ys = ring.map((c) => c[1])
-        return { ward: f.properties, ring, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }
+        const polys = polygonsOf(f.geometry)
+        const outer = polys.flatMap((poly) => poly[0])
+        const xs = outer.map((c) => c[0])
+        const ys = outer.map((c) => c[1])
+        return { ward: f.properties, polys, box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)] }
       }),
     [data],
   )
@@ -230,9 +190,9 @@ export default function App() {
   const fitOnSelect = useRef(true)
 
   useEffect(() => {
-    fetch('/api/stations')
-      .then((r) => (r.ok ? r.json() : []))
-      .then(setStations)
+    fetch('/api/air')
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setAir)
       .catch(() => {}) // the map works without live stations
     fetch('/data/places.json')
       .then((r) => r.json())
@@ -435,7 +395,7 @@ export default function App() {
         const t = z / eyeM
         const lng = ground.lng + (eye.lng - ground.lng) * t
         const lat = ground.lat + (eye.lat - ground.lat) * t
-        const hit = wardIndex.find((w) => lng >= w.box[0] && lng <= w.box[2] && lat >= w.box[1] && lat <= w.box[3] && inRing(lng, lat, w.ring))
+        const hit = wardIndex.find((w) => lng >= w.box[0] && lng <= w.box[2] && lat >= w.box[1] && lat <= w.box[3] && inPolygons(lng, lat, w.polys))
         if (hit && columns.heightOf(hit.ward) >= z) return hit.ward
       }
     }
@@ -626,10 +586,13 @@ export default function App() {
         geometry: { type: 'Point', coordinates: [s.lon, s.lat] },
         properties: {
           fresh: isFresh(s.updated),
-          ...(s.readings.pm25 ? { pm25: s.readings.pm25.value } : {}),
+          ...(s.readings.pm25 != null ? { pm25: s.readings.pm25 } : {}),
           summary:
             `${s.name} air station · ` +
-            POLLUTANTS.filter(([k]) => s.readings[k]).map(([k, label]) => `${label} ${s.readings[k]!.value}`).join(', ') +
+            (Object.keys(POLLUTANT_LABEL) as Pollutant[])
+              .filter((k) => s.readings[k] != null)
+              .map((k) => `${POLLUTANT_LABEL[k]} ${s.readings[k]}`)
+              .join(', ') +
             ` · reported ${ago(s.updated)}`,
         },
       })),
@@ -653,10 +616,10 @@ export default function App() {
       fitOnSelect.current = true
       return
     }
-    const ring = data.features.find((f) => f.properties.id === selectedId)?.geometry.coordinates[0]
-    if (ring) {
+    const geometry = data.features.find((f) => f.properties.id === selectedId)?.geometry
+    if (geometry) {
       const b = new maplibregl.LngLatBounds()
-      ring.forEach((c) => b.extend(c as [number, number]))
+      polygonsOf(geometry).forEach((poly) => poly[0].forEach((c) => b.extend(c as [number, number])))
       // On a phone the search bar and bottom sheet cover part of the map.
       const padding = isMobile() ? { top: 130, bottom: Math.round(window.innerHeight * 0.5), left: 30, right: 30 } : 120
       map.fitBounds(b, { padding, maxZoom: 13.5, duration: 600 })
@@ -686,7 +649,7 @@ export default function App() {
         ward: p.ward,
         place: p,
       })),
-      ...wards.map((w) => ({ key: `ward-${w.id}`, name: w.name, tag: `Ward ${w.id}`, ward: w.id })),
+      ...wards.map((w) => ({ key: `ward-${w.id}`, name: w.name, tag: `Ward ${w.ward_no} · ${w.corporation}`, ward: w.id })),
     ].filter((h) => h.name.toLowerCase().includes(q))
     // Names that start with the query first, then shorter (more exact) names.
     const starts = (h: Hit) => (h.name.toLowerCase().startsWith(q) ? 0 : 1)
@@ -724,7 +687,7 @@ export default function App() {
     setLocating('busy')
     navigator.geolocation.getCurrentPosition(
       ({ coords }) => {
-        const here = data?.features.find((f) => inRing(coords.longitude, coords.latitude, f.geometry.coordinates[0]))
+        const here = data?.features.find((f) => inPolygons(coords.longitude, coords.latitude, polygonsOf(f.geometry)))
         if (!here) return setLocating('You appear to be outside the Bengaluru wards on this map.')
         setLocating('idle')
         if (finding) {
@@ -810,7 +773,7 @@ export default function App() {
             wards={wards}
             active={metric}
             via={null}
-            stations={stations}
+            air={air}
             onPick={setMetricKey}
             onClose={() => setSelectedId(null)}
           />
@@ -889,7 +852,7 @@ export default function App() {
             wards={wards}
             active={metric}
             via={focus?.ward === selected.id ? focus : null}
-            stations={stations}
+            air={air}
             onPick={setMetricKey}
             onClose={() => {
               setFocus(null)
@@ -950,10 +913,10 @@ export default function App() {
                 <b>Parks, lakes, industry, roads, waste sites:</b> OpenStreetMap contributors. Coverage depends on what volunteers have mapped.
               </li>
               <li>
-                <b>Air stations:</b> government (CPCB / KSPCB) monitors and community sensors, via OpenAQ, refreshed every 30 minutes. Each reading shows when it was measured.
+                <b>Air quality:</b> government (CPCB / KSPCB) monitors from CPCB's live feed on data.gov.in, with OpenAQ as a fallback and for community sensors; other Indian cities from the same CPCB feed and cities abroad from reference-grade monitors on OpenAQ, compared on PM2.5. Refreshed every 15 minutes. AQI is worked out from the readings on India's National AQI, with the US EPA figure alongside. Each reading shows when it was measured.
               </li>
               <li>
-                <b>Modelled air and weather:</b> Open-Meteo (CAMS model). It is a regional model on a coarse grid, so neighbouring wards read almost the same.
+                <b>Weather:</b> Open-Meteo forecast model, for air temperature and humidity at the ward.
               </li>
               <li>
                 <b>Flood spots:</b> BBMP / KSRSAC lists of flood-vulnerable, flood-prone and low-lying locations, published on OpenCity (public domain). The lists are undated and are not a record of every flood.
@@ -965,7 +928,7 @@ export default function App() {
                 <b>Localities and metro stations:</b> OpenStreetMap place and station points, matched to the ward they fall in.
               </li>
               <li>
-                <b>Ward boundaries:</b> BBMP 243-ward delimitation via KGIS / DataMeet.
+                <b>Ward boundaries:</b> Greater Bengaluru Authority 2025 delimitation, 369 wards in five corporations (Central, East, North, South, West), December 2025 map via OpenCity.
               </li>
             </ul>
             <p>Not covered yet: measured noise, traffic counts, dated flood and fire history, a street-level tree census.</p>
@@ -1066,11 +1029,11 @@ function WardCard({
   wards,
   active,
   via,
-  stations,
+  air,
   onPick,
   onClose,
 }: {
-  stations: Station[]
+  air: AirData | null
   ward: Ward
   wards: Ward[]
   active: Metric
@@ -1078,21 +1041,23 @@ function WardCard({
   onPick: (key: MetricKey) => void
   onClose: () => void
 }) {
-  const [air, setAir] = useState<Air | 'failed' | null>(null)
+  const [weather, setWeather] = useState<Weather | null>(null)
+  const [tab, setTab] = useState<'overview' | 'air'>('overview')
+  const [scope, setScope] = useState<AirScope>('ward')
 
   useEffect(() => {
     const ctl = new AbortController()
-    setAir(null)
-    fetchAir(ward.lat, ward.lon, ctl.signal)
-      .then(setAir)
-      .catch((e) => e.name !== 'AbortError' && setAir('failed'))
+    setWeather(null)
+    fetchWeather(ward.lat, ward.lon, ctl.signal)
+      .then(setWeather)
+      .catch(() => {}) // the strip simply leaves the weather out
     return () => ctl.abort()
   }, [ward.id, ward.lat, ward.lon])
 
-  const nearest = stations
-    .map((station) => ({ station, km: kmBetween(ward.lat, ward.lon, station.lat, station.lon) }))
-    // A station that is reporting now beats a silent one that is slightly closer.
-    .sort((a, b) => a.km + (isFresh(a.station.updated) ? 0 : 2) - (b.km + (isFresh(b.station.updated) ? 0 : 2)))[0]
+  const openAir = (s: AirScope) => {
+    setScope(s)
+    setTab('air')
+  }
 
   return (
     <section className="card">
@@ -1100,7 +1065,7 @@ function WardCard({
         <div>
           <h2 className="ward-name">{ward.name}</h2>
           <p className="sub">
-            Ward {ward.id} · {ward.area_km2} km² · {ward.parks} named {ward.parks === 1 ? 'park' : 'parks'}
+            Ward {ward.ward_no} · {ward.corporation} · {ward.area_km2} km² · {ward.parks} named {ward.parks === 1 ? 'park' : 'parks'}
           </p>
         </div>
         <button className="close" onClick={onClose} aria-label="Close ward profile">
@@ -1108,76 +1073,52 @@ function WardCard({
         </button>
       </div>
 
-      {via && (
-        <p className="via">
-          {via.name} {via.kind === 'metro' ? 'metro station' : ''} is in this ward. Figures are for the whole ward.
-        </p>
-      )}
+      <div className="card-tabs" role="tablist">
+        <button role="tab" aria-selected={tab === 'overview'} className={tab === 'overview' ? 'on' : ''} onClick={() => setTab('overview')}>
+          Overview
+        </button>
+        <button role="tab" aria-selected={tab === 'air'} className={tab === 'air' ? 'on' : ''} onClick={() => setTab('air')}>
+          Air quality
+        </button>
+      </div>
 
-      <ul className="rows">
-        {METRICS.map((m) => {
-          const rank = rankOf(ward, wards, m)
-          const better = 1 - (rank - 1) / Math.max(1, wards.length - 1)
-          return (
-            <li key={m.key} className={m.key === active.key ? 'row on' : 'row'}>
-              <button onClick={() => onPick(m.key)} title={m.about}>
-                <span className="row-label">{m.label}</span>
-                <span className="num">
-                  {format(ward[m.key], m)} <small>{m.unit}</small>
-                </span>
-                <span className="bar">
-                  <i style={{ width: `${Math.max(4, better * 100)}%`, background: better > 0.66 ? '#2f9e5b' : better > 0.33 ? '#e0a63a' : '#d1483a' }} />
-                </span>
-                <span className="rank">
-                  {m.key === 'flood_spots' && ward.flood_spots === 0
-                    ? 'None listed by BBMP. The list has gaps, so check the low-lying figure too.'
-                    : `${ordinal(rank)} best of ${wards.length}`}
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
-
-      {nearest && (
+      {tab === 'air' ? (
+        <AirPanel air={air} lat={ward.lat} lon={ward.lon} scope={scope} setScope={setScope} />
+      ) : (
         <>
-          <h3>Nearest air station</h3>
-          <p className="station-name">
-            {nearest.station.name} · {nearest.km < 1 ? 'under 1' : nearest.km.toFixed(1)} km away ·{' '}
-            {nearest.station.official ? 'government monitor' : `${nearest.station.provider} sensor`}
-          </p>
-          <dl className="air">
-            {POLLUTANTS.filter(([k]) => nearest.station.readings[k]).map(([k, label]) => (
-              <div key={k}>
-                <dt>{label}</dt>
-                <dd>
-                  {nearest.station.readings[k]!.value} <small>{nearest.station.readings[k]!.unit}</small>
-                </dd>
-              </div>
-            ))}
-          </dl>
-          <p className={isFresh(nearest.station.updated) ? 'hint' : 'hint stale'}>
-            Measured {ago(nearest.station.updated)}
-            {isFresh(nearest.station.updated) ? '.' : ' — this station has not reported since, so it is not a current reading.'}
-          </p>
-        </>
-      )}
+          <AirStrip air={air} weather={weather} lat={ward.lat} lon={ward.lon} onOpen={openAir} />
 
-      <h3>Air right now (model)</h3>
-      {air === null && <p className="hint">Loading live readings…</p>}
-      {air === 'failed' && <p className="hint">Live readings are unavailable right now.</p>}
-      {air && air !== 'failed' && (
-        <>
-          <dl className="air">
-            <div><dt>Air temp</dt><dd>{air.temp}°C</dd></div>
-            <div><dt>Humidity</dt><dd>{air.humidity}%</dd></div>
-            <div><dt>PM2.5</dt><dd>{air.pm2_5} <small>µg/m³</small></dd></div>
-            <div><dt>PM10</dt><dd>{air.pm10} <small>µg/m³</small></dd></div>
-            <div><dt>NO₂</dt><dd>{air.no2} <small>µg/m³</small></dd></div>
-            <div><dt>CO₂</dt><dd>{air.co2} <small>ppm</small></dd></div>
-            <div><dt>Methane</dt><dd>{air.methane} <small>µg/m³</small></dd></div>
-          </dl>
-          <p className="hint">Regional model estimate, not a sensor in this ward. Nearby wards will read almost the same.</p>
+          {via && (
+            <p className="via">
+              {via.name} {via.kind === 'metro' ? 'metro station' : ''} is in this ward. Figures are for the whole ward.
+            </p>
+          )}
+
+          <ul className="rows">
+            {METRICS.map((m) => {
+              const rank = rankOf(ward, wards, m)
+              const better = 1 - (rank - 1) / Math.max(1, wards.length - 1)
+              return (
+                <li key={m.key} className={m.key === active.key ? 'row on' : 'row'}>
+                  <button onClick={() => onPick(m.key)} title={m.about}>
+                    <span className="row-label">{m.label}</span>
+                    <span className="num">
+                      {format(ward[m.key], m)} <small>{m.unit}</small>
+                    </span>
+                    <span className="bar">
+                      <i style={{ width: `${Math.max(4, better * 100)}%`, background: better > 0.66 ? '#2f9e5b' : better > 0.33 ? '#e0a63a' : '#d1483a' }} />
+                    </span>
+                    <span className="rank">
+                      {m.key === 'flood_spots' && ward.flood_spots === 0
+                        ? 'None listed by BBMP. The list has gaps, so check the low-lying figure too.'
+                        : `${ordinal(rank)} best of ${wards.length}`}
+                    </span>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+
         </>
       )}
     </section>

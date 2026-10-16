@@ -151,6 +151,45 @@ h4.bad { color: #a8382c; }
 .locate-msg { flex-basis: 100%; font-size: 12px; color: #a35a12; }
 
 /* Phone: full-screen map, floating search and layer chips, details in a bottom sheet. */
+/* Ward card tabs and air quality */
+.card-tabs { display: flex; gap: 16px; border-bottom: 1px solid var(--line); margin: 2px 0 12px; }
+.card-tabs button { border: 0; background: none; padding: 6px 0; font-size: 13px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+.card-tabs button.on { color: var(--ink); font-weight: 600; border-bottom-color: var(--accent); }
+.air-strip { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.air-link { display: flex; align-items: center; gap: 8px; padding: 7px 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; text-align: left; min-width: 0; }
+.air-link:hover { background: #f1f5f1; }
+.air-link span:last-child { display: flex; flex-direction: column; min-width: 0; }
+.air-link b { font-size: 13px; font-weight: 600; }
+.air-link small { color: var(--muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.air-link b::after { content: ' ›'; color: var(--muted); font-weight: 400; }
+.air-weather { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+.aqi-badge { display: inline-grid; place-items: center; min-width: 34px; height: 28px; padding: 0 6px; border-radius: 6px; color: #fff; font-weight: 700; font-size: 13px; font-variant-numeric: tabular-nums; text-shadow: 0 1px 1px rgb(0 0 0 / 0.25); flex: none; }
+.aqi-badge.big { min-width: 56px; height: 48px; font-size: 22px; border-radius: 10px; }
+.aqi-badge.none { background: #d9d9d9; color: var(--muted); text-shadow: none; }
+.air-panel { display: flex; flex-direction: column; gap: 10px; }
+.air-controls { display: flex; flex-direction: column; gap: 6px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 3px; background: #edf0ec; border-radius: 9px; }
+.seg button { border: 0; border-radius: 7px; padding: 6px; background: none; font-size: 13px; color: var(--muted); }
+.seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgb(0 0 0 / 0.12); }
+.air-head { display: flex; gap: 12px; align-items: center; }
+.air-head > div { display: flex; flex-direction: column; min-width: 0; }
+.air-level { font-size: 16px; }
+.air-head small { color: var(--muted); font-size: 12px; }
+.air-head small.stale { color: #a35a12; }
+.chart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.chart .axis { font-size: 8px; fill: var(--muted); }
+.chart-read { font-size: 12px; color: var(--muted); min-height: 18px; }
+.chart-read b { color: var(--ink); }
+.world { display: flex; flex-direction: column; gap: 5px; }
+.world li { display: grid; grid-template-columns: 88px 1fr 32px; align-items: center; gap: 8px; font-size: 13px; }
+.world li.here { font-weight: 700; }
+.world li.globe .world-name { font-style: italic; color: var(--muted); }
+.world li.globe .world-bar span { opacity: 0.55; }
+.world li.here .world-name::before { content: '● '; color: var(--accent); }
+.world-bar { height: 10px; background: #f1f3f0; border-radius: 5px; overflow: hidden; }
+.world-bar span { display: block; height: 100%; border-radius: 5px; }
+.world .num { text-align: right; }
+
 @media (max-width: 760px) {
   html, body { overflow: hidden; overscroll-behavior: none; }
   .app { display: block; height: 100dvh; }

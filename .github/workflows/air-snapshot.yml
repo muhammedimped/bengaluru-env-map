@@ -1,0 +1,18 @@
+# Records Bengaluru's air readings every hour, so the app can draw a trend.
+# Needs repository secrets SNAPSHOT_URL (https://<site>/api/air-snapshot) and SNAPSHOT_SECRET.
+name: air snapshot
+on:
+  schedule:
+    - cron: '7 * * * *'
+  workflow_dispatch:
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      # Repositories without the secrets (e.g. a mirror) skip quietly instead of failing every hour.
+      - env:
+          URL: ${{ secrets.SNAPSHOT_URL }}
+          SECRET: ${{ secrets.SNAPSHOT_SECRET }}
+        run: |
+          if [ -z "$URL" ]; then echo "no SNAPSHOT_URL secret; skipping"; exit 0; fi
+          curl --fail-with-body -sS --max-time 320 -H "Authorization: Bearer $SECRET" "$URL"

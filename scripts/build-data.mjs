@@ -1,7 +1,8 @@
 // Builds public/data/* from open sources. Raw downloads are cached in data/raw/
 // (delete a file there to refetch it).
 //
-//   wards   – BBMP ward boundaries (datameet / KGIS, 243 wards)
+//   wards   – Greater Bengaluru Authority ward boundaries, 2025 delimitation (369 wards in five
+//             corporations), December 2025 KML on OpenCity
 //   heat    – MODIS MYD11A2 (Aqua, ~1:30 pm / ~1:30 am) land surface temperature, 1 km,
 //             8-day composites (ORNL DAAC)
 //   green   – MODIS MOD13Q1 NDVI, 250 m, 16-day composites (ORNL DAAC)
@@ -24,7 +25,7 @@ const OUT = path.join(ROOT, 'public/data')
 const UA = { 'User-Agent': 'bengaluru-env-map/0.1 (open-data prototype)' }
 
 const WARDS_URL =
-  'https://raw.githubusercontent.com/datameet/Municipal_Spatial_Data/master/Bangalore/BBMP.geojson'
+  'https://data.opencity.in/dataset/863209cb-4ced-4f51-b5c5-156939c50922/resource/9013d656-8051-4e2d-9648-46efd0d86d3d/download/gba-369-wards-december-2025.kml'
 const CENTER = { lat: 12.988, lon: 77.622 }
 const HALF_KM = 22
 const BBOX = [12.82, 77.44, 13.16, 77.8] // south, west, north, east
@@ -137,6 +138,26 @@ function centroidOf(polys) {
   return [sx / n, sy / n]
 }
 
+// ---- wards ------------------------------------------------------------------
+
+const unescapeXml = (t) => t.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+const ringOf = (text) => text.trim().split(/\s+/).map((p) => p.split(',').slice(0, 2).map(Number))
+
+/** GBA ward placemarks → GeoJSON features. Every placemark is a MultiGeometry; most hold one polygon. */
+function parseWardsKml(kml) {
+  return [...kml.matchAll(/<Placemark[^>]*>([\s\S]*?)<\/Placemark>/g)].map(([, body]) => {
+    const properties = Object.fromEntries(
+      [...body.matchAll(/<SimpleData name="([^"]+)">([^<]*)<\/SimpleData>/g)].map(([, k, v]) => [k, unescapeXml(v).trim()]),
+    )
+    const polys = [...body.matchAll(/<Polygon>([\s\S]*?)<\/Polygon>/g)].map(([, poly]) => [
+      ringOf(poly.match(/<outerBoundaryIs>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/)[1]),
+      ...[...poly.matchAll(/<innerBoundaryIs>[\s\S]*?<coordinates>([\s\S]*?)<\/coordinates>/g)].map(([, c]) => ringOf(c)),
+    ])
+    const geometry = polys.length === 1 ? { type: 'Polygon', coordinates: polys[0] } : { type: 'MultiPolygon', coordinates: polys }
+    return { type: 'Feature', properties, geometry }
+  })
+}
+
 // ---- rasters ----------------------------------------------------------------
 
 /** Mean of the valid composites per pixel, with a lon/lat → value lookup. */
@@ -170,7 +191,8 @@ const ndvi = (v) => (v >= -2000 && v <= 10000 ? v * 0.0001 : null)
 
 // ---- main -------------------------------------------------------------------
 
-const wardsRaw = await cached('bbmp.geojson', () => getJson(WARDS_URL))
+const wardsKml = await cached('gba-wards-2025-12.json', () => getText(WARDS_URL))
+const wardsRaw = { features: parseWardsKml(wardsKml) }
 const [lstDay, lstNight, ndviSub] = await Promise.all([
   modis('MYD11A2', 'LST_Day_1km', LST_RANGE),
   modis('MYD11A2', 'LST_Night_1km', LST_RANGE),
@@ -323,8 +345,12 @@ const wards = wardsRaw.features.map((f) => {
     box,
     roadM: 0,
     props: {
-      id: f.properties.KGISWardNo,
-      name: f.properties.KGISWardName.replace(/\s+ward$/i, '').trim(),
+      // Ward numbers restart in each corporation, so the corporation is part of the id.
+      id: `${f.properties.Corporation}-${f.properties.ward_id}`,
+      name: f.properties.ward_name.replace(/\s+ward$/i, '').trim(),
+      corporation: f.properties.Corporation,
+      ward_no: +f.properties.ward_id,
+      assembly: f.properties.ac,
       area_km2: +areaKm2.toFixed(2),
       lon: +(cx / n).toFixed(5),
       lat: +(cy / n).toFixed(5),
