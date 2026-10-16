@@ -4,3 +4,4 @@ data/raw
 .vercel
 .env
 .venv
+.env*
